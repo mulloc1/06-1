@@ -1,0 +1,7 @@
+
+[2026-08-22T10:27:18Z] $ ssh -i <protected-key> ec2-user@54.180.251.168 <connection proof>
+Warning: Permanently added '54.180.251.168' (ED25519) to the list of known hosts.
+ssh_connection=PASS
+remote_user=ec2-user
+remote_host=ip-10-0-1-99.ap-northeast-2.compute.internal
+[exit=0]

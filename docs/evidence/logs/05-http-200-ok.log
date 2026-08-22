@@ -1,0 +1,6 @@
+
+[2026-08-22T10:27:18Z] $ curl http://54.180.251.168/health <expect HTTP 200 and body OK>
+http_status=200
+response_body=OK
+http_200_ok=PASS
+[exit=0]

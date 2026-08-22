@@ -1,0 +1,73 @@
+
+[2026-08-22T10:24:23Z] aws ec2 create-key-pair --key-name lab-cloud-web-key --key-type ed25519 (private key output stored locally and redacted)
+[exit=0]
+
+[2026-08-22T10:24:23Z] $ aws ec2 describe-key-pairs --key-names lab-cloud-web-key <metadata only>
+[
+    {
+        "KeyName": "lab-cloud-web-key",
+        "KeyType": "ed25519",
+        "Project": "codyssey-06-1"
+    }
+]
+[exit=0]
+
+[2026-08-22T10:24:27Z] $ aws ec2 run-instances --image-id ami-0729121845edb4108 --instance-type t3.micro --subnet-id subnet-01551e5c41451fcbf --security-group-ids sg-016dc5812e9d37de9 --key-name lab-cloud-web-key --user-data infra/user-data.sh --8GiB-gp3
+i-0255ec7f91e3451bd
+[exit=0]
+
+[2026-08-22T10:24:43Z] $ aws ec2 wait instance-running --instance-ids i-0255ec7f91e3451bd
+
+[exit=0]
+
+[2026-08-22T10:27:14Z] $ aws ec2 wait instance-status-ok --instance-ids i-0255ec7f91e3451bd
+
+[exit=0]
+
+[2026-08-22T10:27:16Z] $ aws ec2 describe-instances --instance-ids i-0255ec7f91e3451bd <limited fields>
+[
+    {
+        "InstanceId": "i-0255ec7f91e3451bd",
+        "State": "running",
+        "InstanceType": "t3.micro",
+        "ImageId": "ami-0729121845edb4108",
+        "VpcId": "vpc-0a0a0905f06de4e9d",
+        "SubnetId": "subnet-01551e5c41451fcbf",
+        "PublicIpAddress": "54.180.251.168",
+        "SecurityGroups": [
+            {
+                "GroupId": "sg-016dc5812e9d37de9",
+                "GroupName": "lab-cloud-web-sg"
+            }
+        ],
+        "BlockDevices": [
+            {
+                "DeviceName": "/dev/xvda",
+                "VolumeId": "vol-0023a966583c55062",
+                "DeleteOnTermination": true
+            }
+        ]
+    }
+]
+[exit=0]
+
+[2026-08-22T10:27:17Z] $ aws ec2 describe-volumes --volume-ids vol-0023a966583c55062 <size type encryption state>
+[
+    {
+        "VolumeId": "vol-0023a966583c55062",
+        "SizeGiB": 8,
+        "VolumeType": "gp3",
+        "Encrypted": true,
+        "State": "in-use"
+    }
+]
+[exit=0]
+
+[2026-08-22T10:27:18Z] $ ssh -i <protected-key> ec2-user@54.180.251.168 <nginx, localhost, outbound checks>
+nginx=active
+localhost-root-status=200
+localhost-health-status=200
+localhost-health-body=OK
+
+outbound=success
+[exit=0]

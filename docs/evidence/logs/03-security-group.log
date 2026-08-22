@@ -1,0 +1,69 @@
+
+[2026-08-22T10:24:17Z] $ aws ec2 create-security-group --group-name lab-cloud-web-sg --vpc-id vpc-0a0a0905f06de4e9d
+sg-016dc5812e9d37de9
+[exit=0]
+
+[2026-08-22T10:24:19Z] $ aws ec2 authorize-security-group-ingress --group-id sg-016dc5812e9d37de9 --protocol tcp --port 80 --cidr 0.0.0.0/0
+{
+    "Return": true,
+    "SecurityGroupRules": [
+        {
+            "SecurityGroupRuleId": "sgr-02a7c7504faf115f6",
+            "GroupId": "sg-016dc5812e9d37de9",
+            "GroupOwnerId": "746914061605",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "CidrIpv4": "0.0.0.0/0",
+            "SecurityGroupRuleArn": "arn:aws:ec2:ap-northeast-2:746914061605:security-group-rule/sgr-02a7c7504faf115f6"
+        }
+    ]
+}
+[exit=0]
+
+[2026-08-22T10:24:20Z] $ aws ec2 authorize-security-group-ingress --group-id sg-016dc5812e9d37de9 --protocol tcp --port 22 --cidr <learner-ip>/32
+{
+    "Return": true,
+    "SecurityGroupRules": [
+        {
+            "SecurityGroupRuleId": "sgr-0d4c3998ebe1da9ac",
+            "GroupId": "sg-016dc5812e9d37de9",
+            "GroupOwnerId": "746914061605",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIpv4": "121.135.181.35/32",
+            "SecurityGroupRuleArn": "arn:aws:ec2:ap-northeast-2:746914061605:security-group-rule/sgr-0d4c3998ebe1da9ac"
+        }
+    ]
+}
+[exit=0]
+
+[2026-08-22T10:24:21Z] $ aws ec2 describe-security-groups --group-ids sg-016dc5812e9d37de9 <inbound rules>
+[
+    {
+        "GroupId": "sg-016dc5812e9d37de9",
+        "GroupName": "lab-cloud-web-sg",
+        "Inbound": [
+            {
+                "Protocol": "tcp",
+                "FromPort": 80,
+                "ToPort": 80,
+                "CIDRs": [
+                    "0.0.0.0/0"
+                ]
+            },
+            {
+                "Protocol": "tcp",
+                "FromPort": 22,
+                "ToPort": 22,
+                "CIDRs": [
+                    "121.135.181.35/32"
+                ]
+            }
+        ]
+    }
+]
+[exit=0]

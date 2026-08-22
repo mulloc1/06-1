@@ -1,0 +1,10 @@
+# Local AWS credentials and environment files
+.env
+.env.*
+!.env.example
+
+# Private key and credential exports
+*.pem
+*.csv
+.aws/
+.secrets/

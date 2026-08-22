@@ -1,0 +1,173 @@
+
+[2026-08-22T10:36:24Z] $ aws sts get-caller-identity <lab-cloud-web Boolean only>
+True
+[exit=0]
+
+[2026-08-22T10:36:24Z] $ aws ec2 describe-instances <project instances before cleanup>
+[
+    {
+        "InstanceId": "i-09731b6d872b34e98",
+        "State": "terminated",
+        "PublicIpAddress": null,
+        "VolumeIds": []
+    },
+    {
+        "InstanceId": "i-0255ec7f91e3451bd",
+        "State": "running",
+        "PublicIpAddress": "54.180.251.168",
+        "VolumeIds": [
+            "vol-0023a966583c55062"
+        ]
+    }
+]
+[exit=0]
+
+[2026-08-22T10:36:25Z] $ aws ec2 describe-volumes <project volumes before cleanup>
+[
+    {
+        "VolumeId": "vol-0023a966583c55062",
+        "State": "in-use",
+        "SizeGiB": 8,
+        "Type": "gp3"
+    }
+]
+[exit=0]
+
+[2026-08-22T10:36:26Z] $ aws ec2 describe-addresses <project Elastic IPs before cleanup>
+[]
+[exit=0]
+
+[2026-08-22T10:36:27Z] $ aws ec2 describe-key-pairs <project key pairs before cleanup>
+[
+    {
+        "KeyName": "lab-cloud-web-key",
+        "KeyType": "ed25519"
+    }
+]
+[exit=0]
+
+[2026-08-22T10:36:27Z] $ aws ec2 describe-security-groups <project security groups before cleanup>
+[
+    {
+        "GroupId": "sg-016dc5812e9d37de9",
+        "GroupName": "lab-cloud-web-sg",
+        "VpcId": "vpc-0a0a0905f06de4e9d"
+    }
+]
+[exit=0]
+
+[2026-08-22T10:36:28Z] $ aws ec2 describe-route-tables <project route tables before cleanup>
+[
+    {
+        "RouteTableId": "rtb-0da00fd56d22d1e00",
+        "VpcId": "vpc-0a0a0905f06de4e9d",
+        "Associations": [
+            "rtbassoc-07136d8f03fdf3441"
+        ]
+    }
+]
+[exit=0]
+
+[2026-08-22T10:36:29Z] $ aws ec2 describe-subnets <project subnets before cleanup>
+[
+    {
+        "SubnetId": "subnet-01551e5c41451fcbf",
+        "VpcId": "vpc-0a0a0905f06de4e9d",
+        "CidrBlock": "10.0.1.0/24"
+    }
+]
+[exit=0]
+
+[2026-08-22T10:36:29Z] $ aws ec2 describe-internet-gateways <project IGWs before cleanup>
+[
+    {
+        "InternetGatewayId": "igw-0e4e625fee863d5b7",
+        "Attachments": [
+            {
+                "State": "available",
+                "VpcId": "vpc-0a0a0905f06de4e9d"
+            }
+        ]
+    }
+]
+[exit=0]
+
+[2026-08-22T10:36:30Z] $ aws ec2 describe-vpcs <project VPCs before cleanup>
+[
+    {
+        "VpcId": "vpc-0a0a0905f06de4e9d",
+        "CidrBlock": "10.0.0.0/16",
+        "State": "available"
+    }
+]
+[exit=0]
+
+[2026-08-22T10:36:32Z] $ aws ec2 terminate-instances --instance-ids i-0255ec7f91e3451bd
+{
+    "TerminatingInstances": [
+        {
+            "InstanceId": "i-0255ec7f91e3451bd",
+            "CurrentState": {
+                "Code": 32,
+                "Name": "shutting-down"
+            },
+            "PreviousState": {
+                "Code": 16,
+                "Name": "running"
+            }
+        }
+    ]
+}
+[exit=0]
+
+[2026-08-22T10:37:03Z] $ aws ec2 wait instance-terminated --instance-ids i-0255ec7f91e3451bd
+
+[exit=0]
+
+[2026-08-22T10:37:04Z] EBS deleted automatically with EC2: vol-0023a966583c55062
+[exit=0]
+
+[2026-08-22T10:37:05Z] $ aws ec2 delete-key-pair --key-name lab-cloud-web-key
+{
+    "Return": true,
+    "KeyPairId": "key-08134f969da696e69"
+}
+[exit=0]
+
+[2026-08-22T10:37:06Z] local SSH Private Key deleted: .secrets/lab-cloud-web-key.pem
+[exit=0]
+
+[2026-08-22T10:37:07Z] $ aws ec2 delete-security-group --group-id sg-016dc5812e9d37de9 <attempt 1/12>
+{
+    "Return": true,
+    "GroupId": "sg-016dc5812e9d37de9"
+}
+[exit=0]
+
+[2026-08-22T10:37:10Z] $ aws ec2 disassociate-route-table --association-id rtbassoc-07136d8f03fdf3441
+
+[exit=0]
+
+[2026-08-22T10:37:12Z] $ aws ec2 delete-route --route-table-id rtb-0da00fd56d22d1e00 --destination-cidr-block 0.0.0.0/0
+
+[exit=0]
+
+[2026-08-22T10:37:13Z] $ aws ec2 delete-route-table --route-table-id rtb-0da00fd56d22d1e00
+
+[exit=0]
+
+[2026-08-22T10:37:15Z] $ aws ec2 delete-subnet --subnet-id subnet-01551e5c41451fcbf
+
+[exit=0]
+
+[2026-08-22T10:37:17Z] $ aws ec2 detach-internet-gateway --internet-gateway-id igw-0e4e625fee863d5b7 --vpc-id vpc-0a0a0905f06de4e9d
+
+[exit=0]
+
+[2026-08-22T10:37:18Z] $ aws ec2 delete-internet-gateway --internet-gateway-id igw-0e4e625fee863d5b7
+
+[exit=0]
+
+[2026-08-22T10:37:20Z] $ aws ec2 delete-vpc --vpc-id vpc-0a0a0905f06de4e9d
+
+[exit=0]

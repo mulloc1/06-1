@@ -1,0 +1,14 @@
+
+[2026-08-22T10:27:18Z] $ curl --include http://54.180.251.168/health
+HTTP/1.1 200 OK
+Server: nginx/1.30.4
+Date: Sat, 22 Aug 2026 10:27:20 GMT
+Content-Type: application/octet-stream
+Content-Length: 3
+Last-Modified: Sat, 22 Aug 2026 10:25:06 GMT
+Connection: keep-alive
+ETag: "6a897902-3"
+Accept-Ranges: bytes
+
+OK
+[exit=0]

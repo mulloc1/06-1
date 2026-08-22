@@ -1,0 +1,105 @@
+
+[2026-08-22T10:24:00Z] $ aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications <Project and Name tags>
+vpc-0a0a0905f06de4e9d
+[exit=0]
+
+[2026-08-22T10:24:01Z] $ aws ec2 modify-vpc-attribute --vpc-id vpc-0a0a0905f06de4e9d --enable-dns-support true
+
+[exit=0]
+
+[2026-08-22T10:24:02Z] $ aws ec2 modify-vpc-attribute --vpc-id vpc-0a0a0905f06de4e9d --enable-dns-hostnames true
+
+[exit=0]
+
+[2026-08-22T10:24:04Z] $ aws ec2 create-subnet --vpc-id vpc-0a0a0905f06de4e9d --cidr-block 10.0.1.0/24 --availability-zone ap-northeast-2a
+subnet-01551e5c41451fcbf
+[exit=0]
+
+[2026-08-22T10:24:05Z] $ aws ec2 modify-subnet-attribute --subnet-id subnet-01551e5c41451fcbf --map-public-ip-on-launch true
+
+[exit=0]
+
+[2026-08-22T10:24:06Z] $ aws ec2 create-internet-gateway --tag-specifications <Project and Name tags>
+igw-0e4e625fee863d5b7
+[exit=0]
+
+[2026-08-22T10:24:07Z] $ aws ec2 attach-internet-gateway --internet-gateway-id igw-0e4e625fee863d5b7 --vpc-id vpc-0a0a0905f06de4e9d
+
+[exit=0]
+
+[2026-08-22T10:24:09Z] $ aws ec2 create-route-table --vpc-id vpc-0a0a0905f06de4e9d
+rtb-0da00fd56d22d1e00
+[exit=0]
+
+[2026-08-22T10:24:10Z] $ aws ec2 create-route --route-table-id rtb-0da00fd56d22d1e00 --destination-cidr-block 0.0.0.0/0 --gateway-id igw-0e4e625fee863d5b7
+{
+    "Return": true
+}
+[exit=0]
+
+[2026-08-22T10:24:12Z] $ aws ec2 associate-route-table --route-table-id rtb-0da00fd56d22d1e00 --subnet-id subnet-01551e5c41451fcbf
+rtbassoc-07136d8f03fdf3441
+[exit=0]
+
+[2026-08-22T10:24:13Z] $ aws ec2 describe-vpcs --vpc-ids vpc-0a0a0905f06de4e9d <limited fields>
+[
+    {
+        "VpcId": "vpc-0a0a0905f06de4e9d",
+        "CidrBlock": "10.0.0.0/16",
+        "State": "available",
+        "Project": "codyssey-06-1"
+    }
+]
+[exit=0]
+
+[2026-08-22T10:24:14Z] $ aws ec2 describe-subnets --subnet-ids subnet-01551e5c41451fcbf <limited fields>
+[
+    {
+        "SubnetId": "subnet-01551e5c41451fcbf",
+        "VpcId": "vpc-0a0a0905f06de4e9d",
+        "CidrBlock": "10.0.1.0/24",
+        "AvailabilityZone": "ap-northeast-2a",
+        "MapPublicIpOnLaunch": true
+    }
+]
+[exit=0]
+
+[2026-08-22T10:24:14Z] $ aws ec2 describe-internet-gateways --internet-gateway-ids igw-0e4e625fee863d5b7 <attachments>
+[
+    {
+        "InternetGatewayId": "igw-0e4e625fee863d5b7",
+        "Attachments": [
+            {
+                "State": "available",
+                "VpcId": "vpc-0a0a0905f06de4e9d"
+            }
+        ]
+    }
+]
+[exit=0]
+
+[2026-08-22T10:24:15Z] $ aws ec2 describe-route-tables --route-table-ids rtb-0da00fd56d22d1e00 <routes and associations>
+[
+    {
+        "RouteTableId": "rtb-0da00fd56d22d1e00",
+        "Routes": [
+            {
+                "Destination": "10.0.0.0/16",
+                "GatewayId": "local",
+                "State": "active"
+            },
+            {
+                "Destination": "0.0.0.0/0",
+                "GatewayId": "igw-0e4e625fee863d5b7",
+                "State": "active"
+            }
+        ],
+        "Associations": [
+            {
+                "SubnetId": "subnet-01551e5c41451fcbf",
+                "AssociationId": "rtbassoc-07136d8f03fdf3441"
+            }
+        ]
+    }
+]
+[exit=0]
