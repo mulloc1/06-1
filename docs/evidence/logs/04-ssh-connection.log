@@ -5,3 +5,7 @@ ssh_connection=PASS
 remote_user=ec2-user
 remote_host=ip-10-0-1-99.ap-northeast-2.compute.internal
 [exit=0]
+
+[2026-08-26T07:21:45Z] $ ssh -i <protected-key> -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=<protected-known-hosts> ec2-user@13.125.65.30 "printf 'ssh_connection=PASS\nremote_user='; id -un; printf 'remote_host='; hostname"
+ssh: connect to host 13.125.65.30 port 22: Operation timed out
+[exit=255]

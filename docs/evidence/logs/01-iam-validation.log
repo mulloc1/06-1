@@ -1,0 +1,15 @@
+
+[2026-08-26T06:45:12Z] $ aws sts get-caller-identity --query contains(Arn, 'user/lab-cloud-web') <boolean only>
+
+aws: [ERROR]: An error occurred (ExpiredToken) when calling the GetCallerIdentity operation: The security token included in the request is expired
+[exit=254]
+
+[2026-08-26T07:09:11Z] $ aws sts get-caller-identity --query contains(Arn, 'user/lab-cloud-web') <boolean only>
+
+aws: [ERROR]: An error occurred (ExpiredToken) when calling the GetCallerIdentity operation: The security token included in the request is expired
+[exit=254]
+
+[2026-08-26T07:09:15Z] $ aws sts get-caller-identity --query contains(Arn, 'user/lab-cloud-web') <boolean only>
+
+aws: [ERROR]: An error occurred (ExpiredToken) when calling the GetCallerIdentity operation: The security token included in the request is expired
+[exit=254]

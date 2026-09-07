@@ -71,3 +71,67 @@ localhost-health-body=OK
 
 outbound=success
 [exit=0]
+
+[2026-08-26T07:19:25Z] aws ec2 create-key-pair --key-name lab-cloud-web-key --key-type ed25519 (private key output stored locally and redacted)
+[exit=0]
+
+[2026-08-26T07:19:26Z] $ aws ec2 describe-key-pairs --key-names lab-cloud-web-key <metadata only>
+[
+    {
+        "KeyName": "lab-cloud-web-key",
+        "KeyType": "ed25519",
+        "Project": "codyssey-06-1"
+    }
+]
+[exit=0]
+
+[2026-08-26T07:19:29Z] $ aws ec2 run-instances --image-id ami-0729121845edb4108 --instance-type t3.micro --subnet-id subnet-0c80b1a05b14638b7 --security-group-ids sg-06689cb9dcfdc34eb --key-name lab-cloud-web-key --user-data infra/user-data.sh --8GiB-gp3
+i-08fa3ce0909375713
+[exit=0]
+
+[2026-08-26T07:19:45Z] $ aws ec2 wait instance-running --instance-ids i-08fa3ce0909375713
+
+[exit=0]
+
+[2026-08-26T07:21:32Z] $ aws ec2 wait instance-status-ok --instance-ids i-08fa3ce0909375713
+
+[exit=0]
+
+[2026-08-26T07:21:34Z] $ aws ec2 describe-instances --instance-ids i-08fa3ce0909375713 <limited fields>
+[
+    {
+        "InstanceId": "i-08fa3ce0909375713",
+        "State": "running",
+        "InstanceType": "t3.micro",
+        "ImageId": "ami-0729121845edb4108",
+        "VpcId": "vpc-0a8db9c511a2ba5fd",
+        "SubnetId": "subnet-0c80b1a05b14638b7",
+        "PublicIpAddress": "13.125.65.30",
+        "SecurityGroups": [
+            {
+                "GroupId": "sg-06689cb9dcfdc34eb",
+                "GroupName": "lab-cloud-web-sg"
+            }
+        ],
+        "BlockDevices": [
+            {
+                "DeviceName": "/dev/xvda",
+                "VolumeId": "vol-06e499adbb5f6a553",
+                "DeleteOnTermination": true
+            }
+        ]
+    }
+]
+[exit=0]
+
+[2026-08-26T07:21:35Z] $ aws ec2 describe-volumes --volume-ids vol-06e499adbb5f6a553 <size type encryption state>
+[
+    {
+        "VolumeId": "vol-06e499adbb5f6a553",
+        "SizeGiB": 8,
+        "VolumeType": "gp3",
+        "Encrypted": true,
+        "State": "in-use"
+    }
+]
+[exit=0]

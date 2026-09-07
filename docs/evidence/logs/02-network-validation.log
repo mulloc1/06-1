@@ -1,10 +1,10 @@
-[2026-08-22T10:28:11Z] NETWORK VALIDATION START
+[2026-08-26T07:47:47Z] NETWORK VALIDATION START
 region=ap-northeast-2 project=codyssey-06-1
 
-[2026-08-22T10:28:12Z] $ aws ec2 describe-vpcs --vpc-ids vpc-0a0a0905f06de4e9d <limited fields>
+[2026-08-26T07:47:47Z] $ aws ec2 describe-vpcs --vpc-ids vpc-0a8db9c511a2ba5fd <limited fields>
 [
     {
-        "VpcId": "vpc-0a0a0905f06de4e9d",
+        "VpcId": "vpc-0a8db9c511a2ba5fd",
         "Cidr": "10.0.0.0/16",
         "State": "available",
         "Project": "codyssey-06-1"
@@ -12,11 +12,11 @@ region=ap-northeast-2 project=codyssey-06-1
 ]
 [exit=0]
 
-[2026-08-22T10:28:13Z] $ aws ec2 describe-subnets --subnet-ids subnet-01551e5c41451fcbf <public subnet fields>
+[2026-08-26T07:47:48Z] $ aws ec2 describe-subnets --subnet-ids subnet-0c80b1a05b14638b7 <public subnet fields>
 [
     {
-        "SubnetId": "subnet-01551e5c41451fcbf",
-        "VpcId": "vpc-0a0a0905f06de4e9d",
+        "SubnetId": "subnet-0c80b1a05b14638b7",
+        "VpcId": "vpc-0a8db9c511a2ba5fd",
         "Cidr": "10.0.1.0/24",
         "AZ": "ap-northeast-2a",
         "State": "available",
@@ -25,25 +25,25 @@ region=ap-northeast-2 project=codyssey-06-1
 ]
 [exit=0]
 
-[2026-08-22T10:28:14Z] $ aws ec2 describe-internet-gateways --internet-gateway-ids igw-0e4e625fee863d5b7 <attachments>
+[2026-08-26T07:47:49Z] $ aws ec2 describe-internet-gateways --internet-gateway-ids igw-08d1c92f97efe48be <attachments>
 [
     {
-        "InternetGatewayId": "igw-0e4e625fee863d5b7",
+        "InternetGatewayId": "igw-08d1c92f97efe48be",
         "Attachments": [
             {
                 "State": "available",
-                "VpcId": "vpc-0a0a0905f06de4e9d"
+                "VpcId": "vpc-0a8db9c511a2ba5fd"
             }
         ]
     }
 ]
 [exit=0]
 
-[2026-08-22T10:28:14Z] $ aws ec2 describe-route-tables --route-table-ids rtb-0da00fd56d22d1e00 <routes and associations>
+[2026-08-26T07:47:49Z] $ aws ec2 describe-route-tables --route-table-ids rtb-0a41f70977d45bfa3 <routes and associations>
 [
     {
-        "RouteTableId": "rtb-0da00fd56d22d1e00",
-        "VpcId": "vpc-0a0a0905f06de4e9d",
+        "RouteTableId": "rtb-0a41f70977d45bfa3",
+        "VpcId": "vpc-0a8db9c511a2ba5fd",
         "Routes": [
             {
                 "Destination": "10.0.0.0/16",
@@ -52,14 +52,14 @@ region=ap-northeast-2 project=codyssey-06-1
             },
             {
                 "Destination": "0.0.0.0/0",
-                "Target": "igw-0e4e625fee863d5b7",
+                "Target": "igw-08d1c92f97efe48be",
                 "State": "active"
             }
         ],
         "Associations": [
             {
-                "SubnetId": "subnet-01551e5c41451fcbf",
-                "AssociationId": "rtbassoc-07136d8f03fdf3441"
+                "SubnetId": "subnet-0c80b1a05b14638b7",
+                "AssociationId": "rtbassoc-03e35680c2ba3e081"
             }
         ]
     }
@@ -70,12 +70,12 @@ VALIDATION SUMMARY
 [CHECK] VPC_CIDR_CHECK                     expected=10.0.0.0/16              actual=10.0.0.0/16              PASS
 [CHECK] VPC_STATE_CHECK                    expected=available                actual=available                PASS
 [CHECK] VPC_PROJECT_TAG_CHECK              expected=codyssey-06-1            actual=codyssey-06-1            PASS
-[CHECK] SUBNET_VPC_CHECK                   expected=vpc-0a0a0905f06de4e9d    actual=vpc-0a0a0905f06de4e9d    PASS
+[CHECK] SUBNET_VPC_CHECK                   expected=vpc-0a8db9c511a2ba5fd    actual=vpc-0a8db9c511a2ba5fd    PASS
 [CHECK] SUBNET_CIDR_CHECK                  expected=10.0.1.0/24              actual=10.0.1.0/24              PASS
 [CHECK] SUBNET_STATE_CHECK                 expected=available                actual=available                PASS
 [CHECK] SUBNET_PUBLIC_IP_CHECK             expected=true                     actual=true                     PASS
 [CHECK] IGW_ATTACHMENT_CHECK               expected=1                        actual=1                        PASS
-[CHECK] ROUTE_TABLE_VPC_CHECK              expected=vpc-0a0a0905f06de4e9d    actual=vpc-0a0a0905f06de4e9d    PASS
+[CHECK] ROUTE_TABLE_VPC_CHECK              expected=vpc-0a8db9c511a2ba5fd    actual=vpc-0a8db9c511a2ba5fd    PASS
 [CHECK] LOCAL_ROUTE_CHECK                  expected=1                        actual=1                        PASS
 [CHECK] DEFAULT_ROUTE_CHECK                expected=1                        actual=1                        PASS
 [CHECK] SUBNET_ROUTE_ASSOCIATION_CHECK     expected=1                        actual=1                        PASS
