@@ -135,3 +135,11 @@ i-08fa3ce0909375713
     }
 ]
 [exit=0]
+# 명령 설명(사후 주석, 기존 명령·출력·종료 코드는 변경하지 않음)
+# create-key-pair: EC2 SSH 접속용 ED25519 Key Pair를 만들고 Private Key는 로컬에만 저장한다.
+# describe-key-pairs: Key Pair 유형과 Project 태그만 확인한다.
+# run-instances: Public Subnet에 8GiB gp3 볼륨과 초기 설정을 포함한 EC2를 생성한다.
+# wait instance-running/status-ok: EC2 실행 및 상태 검사가 통과할 때까지 기다린다.
+# describe-instances: EC2 상태, 네트워크, Security Group과 연결 볼륨을 확인한다.
+# describe-volumes: 루트 EBS의 크기, 유형, 암호화와 상태를 확인한다.
+# ssh ... checks: EC2 내부 Nginx, localhost 응답과 아웃바운드 통신을 확인한다.

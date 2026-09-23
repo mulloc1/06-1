@@ -80,3 +80,8 @@ VALIDATION SUMMARY
 [CHECK] DEFAULT_ROUTE_CHECK                expected=1                        actual=1                        PASS
 [CHECK] SUBNET_ROUTE_ASSOCIATION_CHECK     expected=1                        actual=1                        PASS
 NETWORK_VALIDATION=PASS
+# 명령 설명(사후 주석, 기존 명령·출력·종료 코드는 변경하지 않음)
+# describe-vpcs: VPC의 ID, CIDR, 상태와 Project 태그를 검증한다.
+# describe-subnets: Public Subnet의 CIDR, 상태, 가용 영역과 Public IP 자동 할당을 검증한다.
+# describe-internet-gateways: IGW와 대상 VPC의 연결 상태를 검증한다.
+# describe-route-tables: local 경로, IGW 기본 경로와 Public Subnet 연결을 검증한다.

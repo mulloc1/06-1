@@ -52,14 +52,15 @@ prompt_value() {
 
 # 민감 값을 제외한 명령·출력·종료 코드를 증거 로그에 기록한다.
 log_capture() {
-  local file="$1" display="$2" output status
-  shift 2
+  local file="$1" description="$2" display="$3" output status
+  shift 3
   set +e
   output="$("$@" 2>&1)"
   status=$?
   set -e
   {
-    printf '\n[%s] $ %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$display"
+    printf '\n# 설명: %s\n' "$description"
+    printf '[%s] $ %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$display"
     printf '%s\n[exit=%d]\n' "$output" "$status"
   } | tee -a "$file" >&2
   (( status == 0 )) || return "$status"
@@ -134,14 +135,16 @@ mkdir -p "$LOG_DIR"
 : > "$IAM_LOG"
 chmod 600 "$CLI_LOG" "$IAM_LOG"
 
-log_capture "$CLI_LOG" 'aws --version' aws --version >/dev/null
+log_capture "$CLI_LOG" '설치된 AWS CLI의 버전과 실행 환경을 확인한다.' 'aws --version' aws --version >/dev/null
 CALLER_MATCH="$(log_capture "$IAM_LOG" \
+  '현재 MFA 세션의 호출자가 실습용 IAM 사용자인지 Boolean 값으로 확인한다.' \
   "aws sts get-caller-identity --query contains(Arn, 'user/lab-cloud-web') <boolean only>" \
   aws sts get-caller-identity --query "contains(Arn, 'user/lab-cloud-web')" \
     --output text --region "$AWS_REGION" --no-cli-pager)"
 case "$CALLER_MATCH" in True|true) ;; *) printf '현재 호출자가 lab-cloud-web 사용자가 아닙니다.\n' >&2; exit 1 ;; esac
 
-log_capture "$IAM_LOG" 'aws ec2 describe-vpcs <EC2 read permission; count only>' \
+log_capture "$IAM_LOG" 'EC2 조회 권한이 허용되는지 VPC 개수만 조회해 확인한다.' \
+  'aws ec2 describe-vpcs <EC2 read permission; count only>' \
   aws ec2 describe-vpcs --query 'length(Vpcs)' --output text \
     --region "$AWS_REGION" --no-cli-pager >/dev/null
 
@@ -155,7 +158,8 @@ IAM_STATUS=$?
 set -e
 
 {
-  printf '\n[%s] unrelated_permission_checks\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  printf '\n# 설명: 실습과 무관한 S3 및 IAM 조회가 최소 권한 정책에 의해 거부되는지 확인한다.\n'
+  printf '[%s] unrelated_permission_checks\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   (( S3_STATUS != 0 )) && printf 's3_access=DENIED_AS_EXPECTED\n' || printf 's3_access=ALLOWED_UNEXPECTEDLY\n'
   (( IAM_STATUS != 0 )) && printf 'iam_list_users=DENIED_AS_EXPECTED\n' || printf 'iam_list_users=ALLOWED_UNEXPECTEDLY\n'
 } | tee -a "$IAM_LOG"

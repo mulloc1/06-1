@@ -40,14 +40,15 @@ set_env() {
 
 # 명령, 출력, 종료 코드를 지정한 증거 로그에 기록한다.
 capture() {
-  local file="$1" display="$2" output status
-  shift 2
+  local file="$1" description="$2" display="$3" output status
+  shift 3
   set +e
   output="$("$@" 2>&1)"
   status=$?
   set -e
   {
-    printf '\n[%s] $ %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$display"
+    printf '\n# 설명: %s\n' "$description"
+    printf '[%s] $ %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$display"
     printf '%s\n[exit=%d]\n' "$output" "$status"
   } | tee -a "$file" >&2
   (( status == 0 )) || return "$status"
@@ -55,13 +56,14 @@ capture() {
 }
 
 logged() {
-  local file="$1" display="$2"
-  shift 2
-  capture "$file" "$display" "$@" >/dev/null
+  local file="$1" description="$2" display="$3"
+  shift 3
+  capture "$file" "$description" "$display" "$@" >/dev/null
 }
 
 note() {
-  printf '\n[%s] %s\n[exit=0]\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$2" | tee -a "$1"
+  printf '\n# 설명: AWS 명령 출력 대신 리소스 재사용 또는 민감 출력 생략 결과를 기록한다.\n' | tee -a "$1"
+  printf '[%s] %s\n[exit=0]\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$2" | tee -a "$1"
 }
 
 is_empty() {
@@ -108,19 +110,23 @@ LAB_VPC_ID="$(aws_ec2 describe-vpcs \
   --filters "Name=tag:Project,Values=$LAB_PROJECT" "Name=tag:Name,Values=$VPC_NAME" \
   --query 'Vpcs[0].VpcId' --output text)"
 if is_empty "$LAB_VPC_ID"; then
-  LAB_VPC_ID="$(capture "$NETWORK_LOG" "aws ec2 create-vpc --cidr-block $LAB_VPC_CIDR <Project and Name tags>" \
+  LAB_VPC_ID="$(capture "$NETWORK_LOG" '실습용 CIDR과 식별 태그를 가진 VPC를 생성한다.' \
+    "aws ec2 create-vpc --cidr-block $LAB_VPC_CIDR <Project and Name tags>" \
     aws_ec2 create-vpc --cidr-block "$LAB_VPC_CIDR" \
       --tag-specifications "ResourceType=vpc,Tags=[{Key=Name,Value=$VPC_NAME},{Key=Project,Value=$LAB_PROJECT}]" \
       --query 'Vpc.VpcId' --output text)"
   set_env LAB_VPC_ID "$LAB_VPC_ID"
-  logged "$NETWORK_LOG" "aws ec2 wait vpc-available --vpc-ids $LAB_VPC_ID" aws_ec2 wait vpc-available --vpc-ids "$LAB_VPC_ID"
+  logged "$NETWORK_LOG" '생성한 VPC가 사용 가능한 상태가 될 때까지 기다린다.' \
+    "aws ec2 wait vpc-available --vpc-ids $LAB_VPC_ID" aws_ec2 wait vpc-available --vpc-ids "$LAB_VPC_ID"
 else
   note "$NETWORK_LOG" "reuse VPC: $LAB_VPC_ID"
   set_env LAB_VPC_ID "$LAB_VPC_ID"
 fi
-logged "$NETWORK_LOG" "aws ec2 modify-vpc-attribute --vpc-id $LAB_VPC_ID --enable-dns-support true" \
+logged "$NETWORK_LOG" 'VPC 내부 DNS 질의 기능을 활성화한다.' \
+  "aws ec2 modify-vpc-attribute --vpc-id $LAB_VPC_ID --enable-dns-support true" \
   aws_ec2 modify-vpc-attribute --vpc-id "$LAB_VPC_ID" --enable-dns-support '{"Value":true}'
-logged "$NETWORK_LOG" "aws ec2 modify-vpc-attribute --vpc-id $LAB_VPC_ID --enable-dns-hostnames true" \
+logged "$NETWORK_LOG" 'Public IP가 있는 인스턴스에 DNS 호스트 이름을 부여하도록 설정한다.' \
+  "aws ec2 modify-vpc-attribute --vpc-id $LAB_VPC_ID --enable-dns-hostnames true" \
   aws_ec2 modify-vpc-attribute --vpc-id "$LAB_VPC_ID" --enable-dns-hostnames '{"Value":true}'
 
 # Public Subnet을 구성하고 인스턴스 Public IPv4 자동 할당을 활성화한다.
@@ -128,7 +134,8 @@ LAB_SUBNET_ID="$(aws_ec2 describe-subnets \
   --filters "Name=vpc-id,Values=$LAB_VPC_ID" "Name=tag:Project,Values=$LAB_PROJECT" "Name=tag:Name,Values=$SUBNET_NAME" \
   --query 'Subnets[0].SubnetId' --output text)"
 if is_empty "$LAB_SUBNET_ID"; then
-  LAB_SUBNET_ID="$(capture "$NETWORK_LOG" "aws ec2 create-subnet --vpc-id $LAB_VPC_ID --cidr-block $LAB_SUBNET_CIDR --availability-zone $LAB_AZ" \
+  LAB_SUBNET_ID="$(capture "$NETWORK_LOG" 'VPC 안에 지정 CIDR과 가용 영역을 사용하는 Public Subnet을 생성한다.' \
+    "aws ec2 create-subnet --vpc-id $LAB_VPC_ID --cidr-block $LAB_SUBNET_CIDR --availability-zone $LAB_AZ" \
     aws_ec2 create-subnet --vpc-id "$LAB_VPC_ID" --cidr-block "$LAB_SUBNET_CIDR" --availability-zone "$LAB_AZ" \
       --tag-specifications "ResourceType=subnet,Tags=[{Key=Name,Value=$SUBNET_NAME},{Key=Project,Value=$LAB_PROJECT}]" \
       --query 'Subnet.SubnetId' --output text)"
@@ -136,7 +143,8 @@ else
   note "$NETWORK_LOG" "reuse subnet: $LAB_SUBNET_ID"
 fi
 set_env LAB_SUBNET_ID "$LAB_SUBNET_ID"
-logged "$NETWORK_LOG" "aws ec2 modify-subnet-attribute --subnet-id $LAB_SUBNET_ID --map-public-ip-on-launch true" \
+logged "$NETWORK_LOG" 'Subnet에서 새 EC2에 Public IPv4가 자동 할당되도록 설정한다.' \
+  "aws ec2 modify-subnet-attribute --subnet-id $LAB_SUBNET_ID --map-public-ip-on-launch true" \
   aws_ec2 modify-subnet-attribute --subnet-id "$LAB_SUBNET_ID" --map-public-ip-on-launch
 
 # Internet Gateway를 구성하고 현재 VPC에 연결한다.
@@ -144,7 +152,8 @@ LAB_IGW_ID="$(aws_ec2 describe-internet-gateways \
   --filters "Name=tag:Project,Values=$LAB_PROJECT" "Name=tag:Name,Values=$IGW_NAME" \
   --query 'InternetGateways[0].InternetGatewayId' --output text)"
 if is_empty "$LAB_IGW_ID"; then
-  LAB_IGW_ID="$(capture "$NETWORK_LOG" 'aws ec2 create-internet-gateway <Project and Name tags>' \
+  LAB_IGW_ID="$(capture "$NETWORK_LOG" 'VPC와 인터넷을 연결할 Internet Gateway를 생성한다.' \
+    'aws ec2 create-internet-gateway <Project and Name tags>' \
     aws_ec2 create-internet-gateway \
       --tag-specifications "ResourceType=internet-gateway,Tags=[{Key=Name,Value=$IGW_NAME},{Key=Project,Value=$LAB_PROJECT}]" \
       --query 'InternetGateway.InternetGatewayId' --output text)"
@@ -155,7 +164,8 @@ set_env LAB_IGW_ID "$LAB_IGW_ID"
 ATTACHED_VPC="$(aws_ec2 describe-internet-gateways --internet-gateway-ids "$LAB_IGW_ID" \
   --query 'InternetGateways[0].Attachments[0].VpcId' --output text)"
 if is_empty "$ATTACHED_VPC"; then
-  logged "$NETWORK_LOG" "aws ec2 attach-internet-gateway --internet-gateway-id $LAB_IGW_ID --vpc-id $LAB_VPC_ID" \
+  logged "$NETWORK_LOG" '생성한 Internet Gateway를 실습 VPC에 연결한다.' \
+    "aws ec2 attach-internet-gateway --internet-gateway-id $LAB_IGW_ID --vpc-id $LAB_VPC_ID" \
     aws_ec2 attach-internet-gateway --internet-gateway-id "$LAB_IGW_ID" --vpc-id "$LAB_VPC_ID"
 elif [[ "$ATTACHED_VPC" != "$LAB_VPC_ID" ]]; then
   printf 'Internet Gateway가 다른 VPC에 연결되어 있습니다: %s\n' "$ATTACHED_VPC" >&2
@@ -167,7 +177,8 @@ LAB_ROUTE_TABLE_ID="$(aws_ec2 describe-route-tables \
   --filters "Name=vpc-id,Values=$LAB_VPC_ID" "Name=tag:Project,Values=$LAB_PROJECT" "Name=tag:Name,Values=$ROUTE_NAME" \
   --query 'RouteTables[0].RouteTableId' --output text)"
 if is_empty "$LAB_ROUTE_TABLE_ID"; then
-  LAB_ROUTE_TABLE_ID="$(capture "$NETWORK_LOG" "aws ec2 create-route-table --vpc-id $LAB_VPC_ID" \
+  LAB_ROUTE_TABLE_ID="$(capture "$NETWORK_LOG" 'Public Subnet 전용 Route Table을 VPC에 생성한다.' \
+    "aws ec2 create-route-table --vpc-id $LAB_VPC_ID" \
     aws_ec2 create-route-table --vpc-id "$LAB_VPC_ID" \
       --tag-specifications "ResourceType=route-table,Tags=[{Key=Name,Value=$ROUTE_NAME},{Key=Project,Value=$LAB_PROJECT}]" \
       --query 'RouteTable.RouteTableId' --output text)"
@@ -178,7 +189,8 @@ set_env LAB_ROUTE_TABLE_ID "$LAB_ROUTE_TABLE_ID"
 ROUTE_TARGET="$(aws_ec2 describe-route-tables --route-table-ids "$LAB_ROUTE_TABLE_ID" \
   --query "RouteTables[0].Routes[?DestinationCidrBlock=='0.0.0.0/0'].GatewayId | [0]" --output text)"
 if is_empty "$ROUTE_TARGET"; then
-  logged "$NETWORK_LOG" "aws ec2 create-route --route-table-id $LAB_ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $LAB_IGW_ID" \
+  logged "$NETWORK_LOG" '모든 외부 목적지 트래픽을 Internet Gateway로 보내는 기본 경로를 추가한다.' \
+    "aws ec2 create-route --route-table-id $LAB_ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $LAB_IGW_ID" \
     aws_ec2 create-route --route-table-id "$LAB_ROUTE_TABLE_ID" --destination-cidr-block 0.0.0.0/0 --gateway-id "$LAB_IGW_ID"
 elif [[ "$ROUTE_TARGET" != "$LAB_IGW_ID" ]]; then
   printf '기본 경로가 다른 대상으로 설정되어 있습니다: %s\n' "$ROUTE_TARGET" >&2
@@ -188,23 +200,28 @@ fi
 LAB_ROUTE_ASSOCIATION_ID="$(aws_ec2 describe-route-tables --route-table-ids "$LAB_ROUTE_TABLE_ID" \
   --query "RouteTables[0].Associations[?SubnetId=='$LAB_SUBNET_ID'].RouteTableAssociationId | [0]" --output text)"
 if is_empty "$LAB_ROUTE_ASSOCIATION_ID"; then
-  LAB_ROUTE_ASSOCIATION_ID="$(capture "$NETWORK_LOG" "aws ec2 associate-route-table --route-table-id $LAB_ROUTE_TABLE_ID --subnet-id $LAB_SUBNET_ID" \
+  LAB_ROUTE_ASSOCIATION_ID="$(capture "$NETWORK_LOG" 'Public Subnet이 해당 Route Table을 사용하도록 연결한다.' \
+    "aws ec2 associate-route-table --route-table-id $LAB_ROUTE_TABLE_ID --subnet-id $LAB_SUBNET_ID" \
     aws_ec2 associate-route-table --route-table-id "$LAB_ROUTE_TABLE_ID" --subnet-id "$LAB_SUBNET_ID" \
       --query 'AssociationId' --output text)"
 fi
 set_env LAB_ROUTE_ASSOCIATION_ID "$LAB_ROUTE_ASSOCIATION_ID"
 
 # 생성 직후 네트워크 네 요소의 실제 상태를 제한된 필드로 기록한다.
-logged "$NETWORK_LOG" "aws ec2 describe-vpcs --vpc-ids $LAB_VPC_ID <limited fields>" \
+logged "$NETWORK_LOG" 'VPC의 CIDR, 상태와 Project 태그를 증거로 조회한다.' \
+  "aws ec2 describe-vpcs --vpc-ids $LAB_VPC_ID <limited fields>" \
   aws_ec2 describe-vpcs --vpc-ids "$LAB_VPC_ID" \
     --query 'Vpcs[].{VpcId:VpcId,Cidr:CidrBlock,State:State,Project:Tags[?Key==`Project`].Value|[0]}'
-logged "$NETWORK_LOG" "aws ec2 describe-subnets --subnet-ids $LAB_SUBNET_ID <public subnet fields>" \
+logged "$NETWORK_LOG" 'Subnet의 CIDR, 가용 영역과 Public IP 자동 할당 설정을 증거로 조회한다.' \
+  "aws ec2 describe-subnets --subnet-ids $LAB_SUBNET_ID <public subnet fields>" \
   aws_ec2 describe-subnets --subnet-ids "$LAB_SUBNET_ID" \
     --query 'Subnets[].{SubnetId:SubnetId,VpcId:VpcId,Cidr:CidrBlock,AZ:AvailabilityZone,PublicIpAutoAssign:MapPublicIpOnLaunch}'
-logged "$NETWORK_LOG" "aws ec2 describe-internet-gateways --internet-gateway-ids $LAB_IGW_ID <attachments>" \
+logged "$NETWORK_LOG" 'Internet Gateway의 VPC 연결 상태를 증거로 조회한다.' \
+  "aws ec2 describe-internet-gateways --internet-gateway-ids $LAB_IGW_ID <attachments>" \
   aws_ec2 describe-internet-gateways --internet-gateway-ids "$LAB_IGW_ID" \
     --query 'InternetGateways[].{InternetGatewayId:InternetGatewayId,Attachments:Attachments}'
-logged "$NETWORK_LOG" "aws ec2 describe-route-tables --route-table-ids $LAB_ROUTE_TABLE_ID <routes and associations>" \
+logged "$NETWORK_LOG" 'Route Table의 기본 경로와 Subnet 연결 상태를 증거로 조회한다.' \
+  "aws ec2 describe-route-tables --route-table-ids $LAB_ROUTE_TABLE_ID <routes and associations>" \
   aws_ec2 describe-route-tables --route-table-ids "$LAB_ROUTE_TABLE_ID" \
     --query 'RouteTables[].{RouteTableId:RouteTableId,Routes:Routes,Associations:Associations}'
 
@@ -218,7 +235,8 @@ LAB_SECURITY_GROUP_ID="$(aws_ec2 describe-security-groups \
   --filters "Name=vpc-id,Values=$LAB_VPC_ID" "Name=tag:Project,Values=$LAB_PROJECT" "Name=group-name,Values=$SG_NAME" \
   --query 'SecurityGroups[0].GroupId' --output text)"
 if is_empty "$LAB_SECURITY_GROUP_ID"; then
-  LAB_SECURITY_GROUP_ID="$(capture "$SG_LOG" "aws ec2 create-security-group --group-name $SG_NAME --vpc-id $LAB_VPC_ID" \
+  LAB_SECURITY_GROUP_ID="$(capture "$SG_LOG" '웹과 SSH 접근을 제어할 실습용 Security Group을 생성한다.' \
+    "aws ec2 create-security-group --group-name $SG_NAME --vpc-id $LAB_VPC_ID" \
     aws_ec2 create-security-group --group-name "$SG_NAME" \
       --description 'HTTP public and SSH learner IP for codyssey-06-1' --vpc-id "$LAB_VPC_ID" \
       --tag-specifications "ResourceType=security-group,Tags=[{Key=Name,Value=$SG_NAME},{Key=Project,Value=$LAB_PROJECT}]" \
@@ -238,7 +256,8 @@ while read -r rule_id protocol from_port to_port cidr; do
   elif [[ "$protocol" == tcp && "$from_port" == 22 && "$to_port" == 22 && "$cidr" == "$LAB_LEARNER_IP_CIDR" ]]; then
     HAS_SSH=true
   else
-    logged "$SG_LOG" "aws ec2 revoke-security-group-ingress --group-id $LAB_SECURITY_GROUP_ID --security-group-rule-ids $rule_id <unexpected inbound rule>" \
+    logged "$SG_LOG" '허용 기준에 없는 기존 인바운드 규칙을 제거한다.' \
+      "aws ec2 revoke-security-group-ingress --group-id $LAB_SECURITY_GROUP_ID --security-group-rule-ids $rule_id <unexpected inbound rule>" \
       aws_ec2 revoke-security-group-ingress --group-id "$LAB_SECURITY_GROUP_ID" --security-group-rule-ids "$rule_id"
   fi
 done < <(aws_ec2 describe-security-group-rules \
@@ -247,14 +266,17 @@ done < <(aws_ec2 describe-security-group-rules \
   --output text)
 
 if [[ "$HAS_HTTP" != true ]]; then
-  logged "$SG_LOG" "aws ec2 authorize-security-group-ingress --group-id $LAB_SECURITY_GROUP_ID --protocol tcp --port 80 --cidr 0.0.0.0/0" \
+  logged "$SG_LOG" '외부 사용자가 웹 서버에 접속할 수 있도록 HTTP 80 포트를 전체 IPv4에 허용한다.' \
+    "aws ec2 authorize-security-group-ingress --group-id $LAB_SECURITY_GROUP_ID --protocol tcp --port 80 --cidr 0.0.0.0/0" \
     aws_ec2 authorize-security-group-ingress --group-id "$LAB_SECURITY_GROUP_ID" --protocol tcp --port 80 --cidr 0.0.0.0/0
 fi
 if [[ "$HAS_SSH" != true ]]; then
-  logged "$SG_LOG" "aws ec2 authorize-security-group-ingress --group-id $LAB_SECURITY_GROUP_ID --protocol tcp --port 22 --cidr <learner-ip>/32" \
+  logged "$SG_LOG" 'SSH 22 포트를 학습자의 현재 공인 IP 한 개에만 허용한다.' \
+    "aws ec2 authorize-security-group-ingress --group-id $LAB_SECURITY_GROUP_ID --protocol tcp --port 22 --cidr <learner-ip>/32" \
     aws_ec2 authorize-security-group-ingress --group-id "$LAB_SECURITY_GROUP_ID" --protocol tcp --port 22 --cidr "$LAB_LEARNER_IP_CIDR"
 fi
-logged "$SG_LOG" "aws ec2 describe-security-groups --group-ids $LAB_SECURITY_GROUP_ID <inbound rules>" \
+logged "$SG_LOG" 'Security Group에 HTTP와 제한된 SSH 규칙만 존재하는지 조회한다.' \
+  "aws ec2 describe-security-groups --group-ids $LAB_SECURITY_GROUP_ID <inbound rules>" \
   aws_ec2 describe-security-groups --group-ids "$LAB_SECURITY_GROUP_ID" \
     --query 'SecurityGroups[].{GroupId:GroupId,Inbound:IpPermissions[].{Protocol:IpProtocol,FromPort:FromPort,ToPort:ToPort,CIDRs:IpRanges[].CidrIp}}'
 
@@ -290,7 +312,8 @@ LAB_INSTANCE_ID="$(aws_ec2 describe-instances \
     'Name=instance-state-name,Values=pending,running,stopping,stopped' \
   --query 'Reservations[].Instances[] | [0].InstanceId' --output text)"
 if is_empty "$LAB_INSTANCE_ID"; then
-  LAB_INSTANCE_ID="$(capture "$EC2_LOG" "aws ec2 run-instances --image-id $LAB_AMI_ID --instance-type $LAB_INSTANCE_TYPE <network, key, 8GiB gp3, user-data>" \
+  LAB_INSTANCE_ID="$(capture "$EC2_LOG" 'Public Subnet에 8GiB gp3 볼륨과 초기 설정을 포함한 EC2를 생성한다.' \
+    "aws ec2 run-instances --image-id $LAB_AMI_ID --instance-type $LAB_INSTANCE_TYPE <network, key, 8GiB gp3, user-data>" \
     aws_ec2 run-instances --image-id "$LAB_AMI_ID" --instance-type "$LAB_INSTANCE_TYPE" --count 1 \
       --subnet-id "$LAB_SUBNET_ID" --security-group-ids "$LAB_SECURITY_GROUP_ID" --key-name "$LAB_KEY_NAME" \
       --associate-public-ip-address \
@@ -308,14 +331,18 @@ set_env LAB_INSTANCE_ID "$LAB_INSTANCE_ID"
 INSTANCE_STATE="$(aws_ec2 describe-instances --instance-ids "$LAB_INSTANCE_ID" \
   --query 'Reservations[0].Instances[0].State.Name' --output text)"
 if [[ "$INSTANCE_STATE" == stopping ]]; then
-  logged "$EC2_LOG" "aws ec2 wait instance-stopped --instance-ids $LAB_INSTANCE_ID" aws_ec2 wait instance-stopped --instance-ids "$LAB_INSTANCE_ID"
+  logged "$EC2_LOG" '중지 중인 기존 EC2가 완전히 중지될 때까지 기다린다.' \
+    "aws ec2 wait instance-stopped --instance-ids $LAB_INSTANCE_ID" aws_ec2 wait instance-stopped --instance-ids "$LAB_INSTANCE_ID"
   INSTANCE_STATE=stopped
 fi
 if [[ "$INSTANCE_STATE" == stopped ]]; then
-  logged "$EC2_LOG" "aws ec2 start-instances --instance-ids $LAB_INSTANCE_ID" aws_ec2 start-instances --instance-ids "$LAB_INSTANCE_ID"
+  logged "$EC2_LOG" '중지된 기존 EC2를 다시 시작한다.' \
+    "aws ec2 start-instances --instance-ids $LAB_INSTANCE_ID" aws_ec2 start-instances --instance-ids "$LAB_INSTANCE_ID"
 fi
-logged "$EC2_LOG" "aws ec2 wait instance-running --instance-ids $LAB_INSTANCE_ID" aws_ec2 wait instance-running --instance-ids "$LAB_INSTANCE_ID"
-logged "$EC2_LOG" "aws ec2 wait instance-status-ok --instance-ids $LAB_INSTANCE_ID" aws_ec2 wait instance-status-ok --instance-ids "$LAB_INSTANCE_ID"
+logged "$EC2_LOG" 'EC2 상태가 running이 될 때까지 기다린다.' \
+  "aws ec2 wait instance-running --instance-ids $LAB_INSTANCE_ID" aws_ec2 wait instance-running --instance-ids "$LAB_INSTANCE_ID"
+logged "$EC2_LOG" 'EC2의 시스템 및 인스턴스 상태 검사가 통과할 때까지 기다린다.' \
+  "aws ec2 wait instance-status-ok --instance-ids $LAB_INSTANCE_ID" aws_ec2 wait instance-status-ok --instance-ids "$LAB_INSTANCE_ID"
 
 LAB_PUBLIC_IP="$(aws_ec2 describe-instances --instance-ids "$LAB_INSTANCE_ID" \
   --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)"
@@ -325,10 +352,12 @@ is_empty "$LAB_PUBLIC_IP" && { printf 'EC2에 Public IPv4가 없습니다.\n' >&
 set_env LAB_PUBLIC_IP "$LAB_PUBLIC_IP"
 set_env LAB_VOLUME_ID "$LAB_VOLUME_ID"
 
-logged "$EC2_LOG" "aws ec2 describe-instances --instance-ids $LAB_INSTANCE_ID <limited fields>" \
+logged "$EC2_LOG" 'EC2의 실행 상태, 네트워크, Security Group과 볼륨 연결을 조회한다.' \
+  "aws ec2 describe-instances --instance-ids $LAB_INSTANCE_ID <limited fields>" \
   aws_ec2 describe-instances --instance-ids "$LAB_INSTANCE_ID" \
     --query 'Reservations[].Instances[].{InstanceId:InstanceId,State:State.Name,InstanceType:InstanceType,VpcId:VpcId,SubnetId:SubnetId,PublicIpAddress:PublicIpAddress,SecurityGroups:SecurityGroups,BlockDevices:BlockDeviceMappings}'
-logged "$EC2_LOG" "aws ec2 describe-volumes --volume-ids $LAB_VOLUME_ID <size, type, encryption, state>" \
+logged "$EC2_LOG" '루트 EBS가 8GiB gp3 암호화 볼륨인지 조회한다.' \
+  "aws ec2 describe-volumes --volume-ids $LAB_VOLUME_ID <size, type, encryption, state>" \
   aws_ec2 describe-volumes --volume-ids "$LAB_VOLUME_ID" \
     --query 'Volumes[].{VolumeId:VolumeId,SizeGiB:Size,VolumeType:VolumeType,Encrypted:Encrypted,State:State}'
 
@@ -345,12 +374,14 @@ done
 
 # SSH 접속과 인스턴스 내부 Nginx·localhost·아웃바운드 상태를 검증한다.
 logged "$SSH_LOG" \
+  'Private Key를 사용해 EC2에 실제 SSH 접속한 사용자와 원격 호스트를 확인한다.' \
   "ssh -i <protected-key> -o BatchMode=yes -o ConnectTimeout=10 ec2-user@$LAB_PUBLIC_IP <connection proof>" \
   ssh -i "$PRIVATE_KEY" -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
     -o "UserKnownHostsFile=$SECRET_DIR/known_hosts" "ec2-user@$LAB_PUBLIC_IP" \
     "printf 'ssh_connection=PASS\\nremote_user='; id -un; printf 'remote_host='; hostname"
 
-logged "$EC2_LOG" "ssh -i <protected-key> ec2-user@$LAB_PUBLIC_IP <nginx, localhost, outbound checks>" \
+logged "$EC2_LOG" 'SSH 원격 명령으로 Nginx, localhost 웹 응답과 인스턴스 아웃바운드 통신을 확인한다.' \
+  "ssh -i <protected-key> ec2-user@$LAB_PUBLIC_IP <nginx, localhost, outbound checks>" \
   ssh -i "$PRIVATE_KEY" -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
     -o "UserKnownHostsFile=$SECRET_DIR/known_hosts" "ec2-user@$LAB_PUBLIC_IP" \
     "printf 'nginx='; systemctl is-active nginx; printf 'localhost-root-status='; curl -s -o /dev/null -w '%{http_code}\\n' http://localhost/; printf 'localhost-health-status='; curl -s -o /dev/null -w '%{http_code}\\n' http://localhost/health; printf 'localhost-health-body='; curl -fsS http://localhost/health; printf '\\noutbound='; curl -fsS https://example.com/ >/dev/null && printf 'success\\n'"
@@ -368,7 +399,8 @@ RESULT=FAIL
 [[ "$CURL_STATUS" == 0 && "$HTTP_STATUS" == 200 && "$HTTP_BODY" == OK ]] && RESULT=PASS
 for file in "$EXTERNAL_LOG" "$HTTP_LOG"; do
   {
-    printf '\n[%s] $ curl http://%s/health <expect HTTP 200 and body OK>\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$LAB_PUBLIC_IP"
+    printf '\n# 설명: 외부 환경에서 /health가 HTTP 200과 고정 본문 OK를 반환하는지 확인한다.\n'
+    printf '[%s] $ curl http://%s/health <expect HTTP 200 and body OK>\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$LAB_PUBLIC_IP"
     printf 'http_status=%s\nresponse_body=%s\nhttp_200_ok=%s\n[exit=%d]\n' "$HTTP_STATUS" "$HTTP_BODY" "$RESULT" "$CURL_STATUS"
   } | tee -a "$file"
 done

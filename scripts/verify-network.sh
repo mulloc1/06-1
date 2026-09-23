@@ -19,14 +19,15 @@ aws_ec2() {
 
 # 각 AWS 조회를 한 번만 실행하고 원본 결과를 검증 로그에 남긴다.
 capture() {
-  local display="$1" output status
-  shift
+  local description="$1" display="$2" output status
+  shift 2
   set +e
   output="$("$@" 2>&1)"
   status=$?
   set -e
   {
-    printf '\n[%s] $ %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$display"
+    printf '\n# 설명: %s\n' "$description"
+    printf '[%s] $ %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$display"
     printf '%s\n[exit=%d]\n' "$output" "$status"
   } | tee -a "$LOG_FILE" >&2
   (( status == 0 )) || return "$status"
@@ -71,23 +72,27 @@ printf '[%s] NETWORK VALIDATION START\nregion=%s project=%s\n' \
   "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$AWS_REGION" "$LAB_PROJECT" | tee "$LOG_FILE"
 
 # VPC, Subnet, IGW, Route Table을 각각 한 번 조회해 이후 판정에 재사용한다.
-VPC_ROW="$(capture "aws ec2 describe-vpcs --vpc-ids $LAB_VPC_ID <id, cidr, state, project>" \
+VPC_ROW="$(capture 'VPC의 ID, CIDR, 상태와 Project 태그가 기대값과 일치하는지 조회한다.' \
+  "aws ec2 describe-vpcs --vpc-ids $LAB_VPC_ID <id, cidr, state, project>" \
   aws_ec2 describe-vpcs --vpc-ids "$LAB_VPC_ID" \
     --query 'Vpcs[0].[VpcId,CidrBlock,State,Tags[?Key==`Project`].Value|[0]]' --output text)"
 read -r VPC_ID VPC_CIDR VPC_STATE VPC_PROJECT <<< "$VPC_ROW"
 
-SUBNET_ROW="$(capture "aws ec2 describe-subnets --subnet-ids $LAB_SUBNET_ID <public subnet fields>" \
+SUBNET_ROW="$(capture 'Public Subnet의 VPC, CIDR, 상태, 가용 영역과 Public IP 자동 할당 설정을 조회한다.' \
+  "aws ec2 describe-subnets --subnet-ids $LAB_SUBNET_ID <public subnet fields>" \
   aws_ec2 describe-subnets --subnet-ids "$LAB_SUBNET_ID" \
     --query 'Subnets[0].[SubnetId,VpcId,CidrBlock,State,MapPublicIpOnLaunch,AvailabilityZone]' --output text)"
 read -r SUBNET_ID SUBNET_VPC SUBNET_CIDR SUBNET_STATE SUBNET_PUBLIC_IP SUBNET_AZ <<< "$SUBNET_ROW"
 SUBNET_PUBLIC_IP="$(printf '%s' "$SUBNET_PUBLIC_IP" | tr '[:upper:]' '[:lower:]')"
 
-IGW_ROW="$(capture "aws ec2 describe-internet-gateways --internet-gateway-ids $LAB_IGW_ID <attachment>" \
+IGW_ROW="$(capture 'Internet Gateway가 대상 VPC에 정상적으로 연결되어 있는지 조회한다.' \
+  "aws ec2 describe-internet-gateways --internet-gateway-ids $LAB_IGW_ID <attachment>" \
   aws_ec2 describe-internet-gateways --internet-gateway-ids "$LAB_IGW_ID" \
     --query 'InternetGateways[0].[InternetGatewayId,Attachments[0].VpcId,Attachments[0].State]' --output text)"
 read -r IGW_ID IGW_VPC IGW_STATE <<< "$IGW_ROW"
 
-ROUTE_ROW="$(capture "aws ec2 describe-route-tables --route-table-ids $LAB_ROUTE_TABLE_ID <routes and association>" \
+ROUTE_ROW="$(capture 'Route Table의 local 경로, IGW 기본 경로와 Public Subnet 연결을 조회한다.' \
+  "aws ec2 describe-route-tables --route-table-ids $LAB_ROUTE_TABLE_ID <routes and association>" \
   aws_ec2 describe-route-tables --route-table-ids "$LAB_ROUTE_TABLE_ID" \
     --query "RouteTables[0].[RouteTableId,VpcId,length(Routes[?DestinationCidrBlock=='$LAB_VPC_CIDR' && GatewayId=='local' && State=='active']),length(Routes[?DestinationCidrBlock=='0.0.0.0/0' && GatewayId=='$LAB_IGW_ID' && State=='active']),length(Associations[?SubnetId=='$LAB_SUBNET_ID'])]" \
     --output text)"

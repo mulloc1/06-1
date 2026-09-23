@@ -136,3 +136,8 @@ sg-06689cb9dcfdc34eb
     }
 ]
 [exit=0]
+# 명령 설명(사후 주석, 기존 명령·출력·종료 코드는 변경하지 않음)
+# create-security-group: 웹과 SSH 접근을 제어할 실습용 Security Group을 생성한다.
+# authorize ... port 80: 외부 HTTP 접속을 위해 TCP 80을 전체 IPv4에 허용한다.
+# authorize ... port 22: SSH 접속을 학습자 공인 IP 한 개(/32)에만 허용한다.
+# describe-security-groups: 실제 인바운드 규칙이 HTTP와 제한된 SSH뿐인지 확인한다.

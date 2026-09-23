@@ -208,3 +208,16 @@ rtbassoc-03e35680c2ba3e081
     }
 ]
 [exit=0]
+# 명령 설명(사후 주석, 기존 명령·출력·종료 코드는 변경하지 않음)
+# create-vpc: 실습용 CIDR과 태그를 가진 VPC를 생성한다.
+# modify-vpc-attribute: VPC의 DNS 질의 및 DNS 호스트 이름 기능을 활성화한다.
+# create-subnet: VPC 안에 지정 CIDR과 가용 영역의 Public Subnet을 생성한다.
+# modify-subnet-attribute: 새 EC2에 Public IPv4가 자동 할당되도록 설정한다.
+# create/attach-internet-gateway: IGW를 생성하고 실습 VPC에 연결한다.
+# create-route-table: Public Subnet이 사용할 Route Table을 생성한다.
+# create-route: 외부 목적지 0.0.0.0/0의 다음 대상을 IGW로 설정한다.
+# associate-route-table: Public Subnet과 Route Table을 연결한다.
+# describe-vpcs: VPC의 CIDR, 상태와 태그를 확인한다.
+# describe-subnets: Subnet의 CIDR, 가용 영역과 Public IP 설정을 확인한다.
+# describe-internet-gateways: IGW가 VPC에 연결됐는지 확인한다.
+# describe-route-tables: local/default 경로와 Subnet 연결을 확인한다.

@@ -37,3 +37,6 @@
 
 [2026-08-26T07:49:42Z] cleanup_status=PASS; IAM credentials and .env intentionally retained
 [exit=0]
+# 설명(사후 주석): describe-* 명령은 정리 후 각 Project 리소스 개수가 0인지 확인한다.
+# cleanup_status=PASS는 AWS 서버 리소스 정리가 완료됐고 IAM 자격 증명과 로컬 .env는 유지했음을 뜻한다.
+# 기존 명령, 출력과 종료 코드는 변경하지 않았다.

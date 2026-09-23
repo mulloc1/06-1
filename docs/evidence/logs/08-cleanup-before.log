@@ -165,3 +165,14 @@ True
 [2026-08-26T07:49:35Z] $ aws ec2 delete-vpc --vpc-id vpc-0a8db9c511a2ba5fd
 
 [exit=0]
+# 명령 설명(사후 주석, 기존 명령·출력·종료 코드는 변경하지 않음)
+# get-caller-identity: 삭제를 수행하는 호출자가 실습용 IAM 사용자인지 확인한다.
+# describe-* before cleanup: 삭제 전 각 실습 리소스의 ID와 상태를 확인한다.
+# terminate-instances / wait: EC2 종료를 요청하고 완전히 종료될 때까지 기다린다.
+# delete-key-pair: AWS에 등록된 실습 SSH Key Pair 메타데이터를 삭제한다.
+# delete-security-group: EC2 네트워크 종속성 해제 후 Security Group을 삭제한다.
+# disassociate-route-table: Public Subnet과 Route Table의 연결을 해제한다.
+# delete-route / delete-route-table: IGW 기본 경로와 사용자 Route Table을 삭제한다.
+# delete-subnet: 실습 Public Subnet을 삭제한다.
+# detach/delete-internet-gateway: IGW를 VPC에서 분리한 후 삭제한다.
+# delete-vpc: 하위 네트워크 리소스가 제거된 실습 VPC를 삭제한다.
