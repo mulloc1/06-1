@@ -31,6 +31,7 @@ AWS CLI 설치와 IAM 사용자·정책 생성은 자동화 대상에 포함하�
 - MFA 6자리 코드로 12시간 임시 세션 발급
 - 임시 자격 증명을 로컬 `.env`에 저장
 - 호출자가 `lab-cloud-web`인지 Boolean 결과로 검증
+- EC2 조회 허용과 S3·IAM 관리 접근 거부를 로그로 검증
 
 세션이 만료됐을 때는 같은 파일을 다시 실행하면 된다. 기존 네트워크와 EC2 ID는
 덮어쓰지 않는다.
@@ -54,7 +55,7 @@ AWS CLI 설치와 IAM 사용자·정책 생성은 자동화 대상에 포함하�
 
 화면 캡처와 HTTP 규칙 제거를 이용한 장애 재현은 자동 서버 설정에 포함하지 않는다.
 
-실행 증거는 `docs/evidence/logs/`에 누적되며, SSH 접속 성공은
+실행 증거는 `docs/evidence/logs/`에 최신 실행 결과로 저장되며, SSH 접속 성공은
 `04-ssh-connection.log`, 외부 `/health`의 상태 코드·본문 판정은
 `05-http-200-ok.log`에서 각각 독립적으로 확인할 수 있다. SSH Private Key 내용은 로그에
 기록하지 않는다.
@@ -90,22 +91,15 @@ EC2를 종료하고 다시 생성하면 Public IPv4가 달라질 수 있다. 현
 
 ## 리소스 정리
 
-필수 증거를 모두 확보한 뒤 먼저 조회 전용 모드로 삭제 대상을 확인한다.
+필수 증거를 모두 확보한 뒤 정리 스크립트를 실행한다.
 
 ```bash
 ./scripts/cleanup-server.sh
 ```
 
-실제 삭제는 `execute`를 명시하고 화면에 프로젝트명 `codyssey-06-1`을 다시 입력해야
-시작된다.
-
-```bash
-./scripts/cleanup-server.sh execute
-```
-
-`./scripts/cleanup-server.sh --execute`도 동일하게 동작한다.
-
-실행 모드는 삭제 전 상태와 명령을 `docs/evidence/logs/08-cleanup-before.log`에,
+스크립트는 삭제 대상 ID와 `Project=codyssey-06-1` 태그를 먼저 표시한다. 화면에
+프로젝트명 `codyssey-06-1`을 다시 입력해야 실제 삭제가 시작된다. 삭제 전 상태와 명령은
+`docs/evidence/logs/08-cleanup-before.log`에,
 프로젝트 리소스가 모두 0개인지 확인한 결과를 `09-cleanup-after.log`에 기록한다.
 
 이 스크립트는 AWS의 EC2·EBS·Key Pair·SG·Route Table·Subnet·IGW·VPC와 해당 AWS

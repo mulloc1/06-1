@@ -20,9 +20,8 @@
 7. IGW를 VPC에서 분리하고 삭제
 8. 마지막으로 VPC 삭제
 
-실행 전에는 `./scripts/cleanup-server.sh`로 대상만 조회하고, 실제 정리는
-`./scripts/cleanup-server.sh execute`로 수행한다(`--execute`도 동일). 실행 모드는 프로젝트 태그와 정확한
-ID를 다시 검증하고 `codyssey-06-1` 확인 문구를 입력해야 삭제를 시작한다.
+실제 정리는 `./scripts/cleanup-server.sh`로 수행한다. 스크립트는 프로젝트 태그와 정확한
+ID를 먼저 검증하고 `codyssey-06-1` 확인 문구를 입력해야 삭제를 시작한다.
 
 삭제 전에는 `08-cleanup-before.log`에 대상 ID를 기록하고, 삭제 후에는 프로젝트 태그로
 EC2·EBS·EIP·IGW·VPC 등을 다시 조회해 빈 결과를 `09-cleanup-after.log`에 남긴다.

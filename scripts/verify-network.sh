@@ -1,251 +1,122 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-set -o pipefail
 umask 077
 
-LAB_SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-LAB_REPO_ROOT="$(cd -- "${LAB_SCRIPT_DIR}/.." && pwd)"
-LAB_ENV_FILE="${LAB_REPO_ROOT}/.env"
-LAB_LOG_FILE="${LAB_REPO_ROOT}/docs/evidence/logs/02-network-validation.log"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+ENV_FILE="$ROOT_DIR/.env"
+LOG_FILE="$ROOT_DIR/docs/evidence/logs/02-network-validation.log"
 
-usage() {
-  cat <<'EOF'
-사용법:
-  ./scripts/verify-network.sh
-
-읽기 전용으로 다음 항목을 조회하고 PASS/FAIL을 기록합니다.
-  VPC, Public Subnet, Internet Gateway, Route Table,
-  local 경로, 0.0.0.0/0 → IGW 경로, Subnet 연결
-
-결과 로그:
-  docs/evidence/logs/02-network-validation.log
-EOF
+# 읽기 전용 검증에 필요한 공통 명령 형식을 정의한다.
+need() {
+  command -v "$1" >/dev/null 2>&1 || { printf '필수 프로그램을 찾을 수 없습니다: %s\n' "$1" >&2; exit 1; }
 }
 
-case "${1:-}" in
-  "") ;;
-  --help|-h)
-    usage
-    exit 0
-    ;;
-  *)
-    printf '알 수 없는 옵션: %s\n\n' "$1" >&2
-    usage >&2
-    exit 2
-    ;;
-esac
+aws_ec2() {
+  aws ec2 "$@" --region "$AWS_REGION" --no-cli-pager
+}
 
-if (( $# > 1 )); then
-  printf '옵션은 하나만 지정할 수 있습니다.\n' >&2
-  exit 2
-fi
+# 각 AWS 조회를 한 번만 실행하고 원본 결과를 검증 로그에 남긴다.
+capture() {
+  local display="$1" output status
+  shift
+  set +e
+  output="$("$@" 2>&1)"
+  status=$?
+  set -e
+  {
+    printf '\n[%s] $ %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$display"
+    printf '%s\n[exit=%d]\n' "$output" "$status"
+  } | tee -a "$LOG_FILE" >&2
+  (( status == 0 )) || return "$status"
+  printf '%s\n' "$output"
+}
 
-require_command() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    printf '필수 프로그램을 찾을 수 없습니다: %s\n' "$1" >&2
-    exit 1
+# 기대값과 실제값을 비교해 누적 실패 수와 PASS/FAIL을 기록한다.
+check() {
+  local name="$1" expected="$2" actual="$3" result=PASS
+  if [[ "$actual" != "$expected" ]]; then
+    result=FAIL
+    FAILURES=$((FAILURES + 1))
   fi
+  printf '[CHECK] %-32s expected=%-20s actual=%-20s %s\n' \
+    "$name" "$expected" "$actual" "$result" | tee -a "$LOG_FILE"
 }
 
-require_command aws
-require_command date
-require_command grep
-require_command tee
-require_command tr
-
-if [[ ! -f "$LAB_ENV_FILE" ]]; then
-  printf '.env를 찾을 수 없습니다: %s\n' "$LAB_ENV_FILE" >&2
-  exit 1
-fi
-chmod 600 "$LAB_ENV_FILE"
+# 환경 파일과 MFA 세션을 확인하고 기존 검증 로그를 최신 실행으로 교체한다.
+(( $# == 0 )) || { printf '사용법: ./scripts/verify-network.sh\n' >&2; exit 2; }
+for command in aws tee tr; do need "$command"; done
+[[ -f "$ENV_FILE" ]] || { printf '.env를 찾을 수 없습니다.\n' >&2; exit 1; }
 
 set -a
 # shellcheck disable=SC1090
-source "$LAB_ENV_FILE"
+source "$ENV_FILE"
 set +a
 
-: "${AWS_ACCESS_KEY_ID:?AWS CLI MFA 세션이 필요합니다}"
-: "${AWS_SECRET_ACCESS_KEY:?AWS CLI MFA 세션이 필요합니다}"
-: "${AWS_SESSION_TOKEN:?AWS CLI MFA 세션이 필요합니다}"
-: "${AWS_REGION:?AWS_REGION이 필요합니다}"
-: "${LAB_PROJECT:?LAB_PROJECT가 필요합니다}"
-: "${LAB_VPC_CIDR:?LAB_VPC_CIDR이 필요합니다}"
-: "${LAB_SUBNET_CIDR:?LAB_SUBNET_CIDR이 필요합니다}"
-: "${LAB_VPC_ID:?LAB_VPC_ID가 필요합니다}"
-: "${LAB_SUBNET_ID:?LAB_SUBNET_ID가 필요합니다}"
-: "${LAB_IGW_ID:?LAB_IGW_ID가 필요합니다}"
-: "${LAB_ROUTE_TABLE_ID:?LAB_ROUTE_TABLE_ID가 필요합니다}"
+for variable in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_REGION LAB_PROJECT \
+  LAB_VPC_CIDR LAB_SUBNET_CIDR LAB_VPC_ID LAB_SUBNET_ID LAB_IGW_ID LAB_ROUTE_TABLE_ID; do
+  [[ -n "${!variable:-}" ]] || { printf '필수 환경 변수가 없습니다: %s\n' "$variable" >&2; exit 1; }
+done
+[[ "$AWS_REGION" == ap-northeast-2 ]] || { printf '서울 리전(ap-northeast-2)만 검증할 수 있습니다.\n' >&2; exit 1; }
 
-if [[ "$AWS_REGION" != "ap-northeast-2" ]]; then
-  printf '검증 중단: 서울 리전(ap-northeast-2)이 아닙니다. 현재 값: %s\n' "$AWS_REGION" >&2
-  exit 1
-fi
-
-if ! aws sts get-caller-identity \
-  --query "contains(Arn, 'user/lab-cloud-web')" \
-  --output text \
-  --region "$AWS_REGION" \
-  --no-cli-pager | grep -Eiq '^true$'; then
-  printf '검증 중단: MFA 세션이 만료됐거나 lab-cloud-web 사용자가 아닙니다.\n' >&2
-  printf '먼저 ./scripts/setup-aws-cli.sh를 실행하세요.\n' >&2
-  exit 1
-fi
-
-mkdir -p "${LAB_LOG_FILE%/*}"
-: > "$LAB_LOG_FILE"
-chmod 600 "$LAB_LOG_FILE"
-
-run_capture() {
-  local lab_display="$1"
-  shift
-  local lab_output
-  local lab_status
-
-  set +e
-  lab_output="$("$@" 2>&1)"
-  lab_status=$?
-  set -e
-
-  {
-    printf '\n[%s] $ %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$lab_display"
-    printf '%s\n' "$lab_output"
-    printf '[exit=%d]\n' "$lab_status"
-  } | tee -a "$LAB_LOG_FILE" >&2
-
-  if (( lab_status != 0 )); then
-    return "$lab_status"
-  fi
-
-  printf '%s\n' "$lab_output"
-}
-
-run_logged() {
-  local lab_display="$1"
-  shift
-  run_capture "$lab_display" "$@" >/dev/null
-}
-
-record_check() {
-  local lab_name="$1"
-  local lab_expected="$2"
-  local lab_actual="$3"
-  local lab_result
-
-  if [[ "$lab_actual" == "$lab_expected" ]]; then
-    lab_result="PASS"
-  else
-    lab_result="FAIL"
-    LAB_FAILURES=$((LAB_FAILURES + 1))
-  fi
-
-  printf '[CHECK] %-34s expected=%-24s actual=%-24s %s\n' \
-    "$lab_name" "$lab_expected" "$lab_actual" "$lab_result" | tee -a "$LAB_LOG_FILE"
-}
-
-printf '[%s] NETWORK VALIDATION START\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" | tee "$LAB_LOG_FILE"
-printf 'region=%s project=%s\n' "$AWS_REGION" "$LAB_PROJECT" | tee -a "$LAB_LOG_FILE"
-
-run_logged \
-  "aws ec2 describe-vpcs --vpc-ids ${LAB_VPC_ID} <limited fields>" \
-  aws ec2 describe-vpcs \
-    --vpc-ids "$LAB_VPC_ID" \
-    --query 'Vpcs[].{VpcId:VpcId,Cidr:CidrBlock,State:State,Project:Tags[?Key==`Project`].Value|[0]}' \
-    --region "$AWS_REGION" \
-    --no-cli-pager
-
-run_logged \
-  "aws ec2 describe-subnets --subnet-ids ${LAB_SUBNET_ID} <public subnet fields>" \
-  aws ec2 describe-subnets \
-    --subnet-ids "$LAB_SUBNET_ID" \
-    --query 'Subnets[].{SubnetId:SubnetId,VpcId:VpcId,Cidr:CidrBlock,AZ:AvailabilityZone,State:State,PublicIpAutoAssign:MapPublicIpOnLaunch}' \
-    --region "$AWS_REGION" \
-    --no-cli-pager
-
-run_logged \
-  "aws ec2 describe-internet-gateways --internet-gateway-ids ${LAB_IGW_ID} <attachments>" \
-  aws ec2 describe-internet-gateways \
-    --internet-gateway-ids "$LAB_IGW_ID" \
-    --query 'InternetGateways[].{InternetGatewayId:InternetGatewayId,Attachments:Attachments}' \
-    --region "$AWS_REGION" \
-    --no-cli-pager
-
-run_logged \
-  "aws ec2 describe-route-tables --route-table-ids ${LAB_ROUTE_TABLE_ID} <routes and associations>" \
-  aws ec2 describe-route-tables \
-    --route-table-ids "$LAB_ROUTE_TABLE_ID" \
-    --query 'RouteTables[].{RouteTableId:RouteTableId,VpcId:VpcId,Routes:Routes[].{Destination:DestinationCidrBlock,Target:GatewayId,State:State},Associations:Associations[].{SubnetId:SubnetId,AssociationId:RouteTableAssociationId}}' \
-    --region "$AWS_REGION" \
-    --no-cli-pager
-
-LAB_ACTUAL_VPC_CIDR="$(aws ec2 describe-vpcs \
-  --vpc-ids "$LAB_VPC_ID" --query 'Vpcs[0].CidrBlock' \
+CALLER="$(aws sts get-caller-identity --query "contains(Arn, 'user/lab-cloud-web')" \
   --output text --region "$AWS_REGION" --no-cli-pager)"
-LAB_ACTUAL_VPC_STATE="$(aws ec2 describe-vpcs \
-  --vpc-ids "$LAB_VPC_ID" --query 'Vpcs[0].State' \
-  --output text --region "$AWS_REGION" --no-cli-pager)"
-LAB_ACTUAL_VPC_PROJECT="$(aws ec2 describe-vpcs \
-  --vpc-ids "$LAB_VPC_ID" --query 'Vpcs[0].Tags[?Key==`Project`].Value | [0]' \
-  --output text --region "$AWS_REGION" --no-cli-pager)"
+case "$CALLER" in True|true) ;; *) printf 'AWS 세션이 만료됐거나 호출자가 올바르지 않습니다.\n' >&2; exit 1 ;; esac
 
-LAB_ACTUAL_SUBNET_VPC="$(aws ec2 describe-subnets \
-  --subnet-ids "$LAB_SUBNET_ID" --query 'Subnets[0].VpcId' \
-  --output text --region "$AWS_REGION" --no-cli-pager)"
-LAB_ACTUAL_SUBNET_CIDR="$(aws ec2 describe-subnets \
-  --subnet-ids "$LAB_SUBNET_ID" --query 'Subnets[0].CidrBlock' \
-  --output text --region "$AWS_REGION" --no-cli-pager)"
-LAB_ACTUAL_SUBNET_STATE="$(aws ec2 describe-subnets \
-  --subnet-ids "$LAB_SUBNET_ID" --query 'Subnets[0].State' \
-  --output text --region "$AWS_REGION" --no-cli-pager)"
-LAB_ACTUAL_PUBLIC_IP_ASSIGN="$(aws ec2 describe-subnets \
-  --subnet-ids "$LAB_SUBNET_ID" --query 'Subnets[0].MapPublicIpOnLaunch' \
-  --output text --region "$AWS_REGION" --no-cli-pager | tr '[:upper:]' '[:lower:]')"
+mkdir -p "${LOG_FILE%/*}"
+: > "$LOG_FILE"
+chmod 600 "$LOG_FILE"
+printf '[%s] NETWORK VALIDATION START\nregion=%s project=%s\n' \
+  "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$AWS_REGION" "$LAB_PROJECT" | tee "$LOG_FILE"
 
-LAB_ACTUAL_IGW_ATTACHMENT_COUNT="$(aws ec2 describe-internet-gateways \
-  --internet-gateway-ids "$LAB_IGW_ID" \
-  --query "length(InternetGateways[0].Attachments[?VpcId=='${LAB_VPC_ID}' && State=='available'])" \
-  --output text --region "$AWS_REGION" --no-cli-pager)"
+# VPC, Subnet, IGW, Route Table을 각각 한 번 조회해 이후 판정에 재사용한다.
+VPC_ROW="$(capture "aws ec2 describe-vpcs --vpc-ids $LAB_VPC_ID <id, cidr, state, project>" \
+  aws_ec2 describe-vpcs --vpc-ids "$LAB_VPC_ID" \
+    --query 'Vpcs[0].[VpcId,CidrBlock,State,Tags[?Key==`Project`].Value|[0]]' --output text)"
+read -r VPC_ID VPC_CIDR VPC_STATE VPC_PROJECT <<< "$VPC_ROW"
 
-LAB_ACTUAL_ROUTE_TABLE_VPC="$(aws ec2 describe-route-tables \
-  --route-table-ids "$LAB_ROUTE_TABLE_ID" --query 'RouteTables[0].VpcId' \
-  --output text --region "$AWS_REGION" --no-cli-pager)"
-LAB_ACTUAL_LOCAL_ROUTE_COUNT="$(aws ec2 describe-route-tables \
-  --route-table-ids "$LAB_ROUTE_TABLE_ID" \
-  --query "length(RouteTables[0].Routes[?DestinationCidrBlock=='${LAB_VPC_CIDR}' && GatewayId=='local' && State=='active'])" \
-  --output text --region "$AWS_REGION" --no-cli-pager)"
-LAB_ACTUAL_DEFAULT_ROUTE_COUNT="$(aws ec2 describe-route-tables \
-  --route-table-ids "$LAB_ROUTE_TABLE_ID" \
-  --query "length(RouteTables[0].Routes[?DestinationCidrBlock=='0.0.0.0/0' && GatewayId=='${LAB_IGW_ID}' && State=='active'])" \
-  --output text --region "$AWS_REGION" --no-cli-pager)"
-LAB_ACTUAL_SUBNET_ASSOCIATION_COUNT="$(aws ec2 describe-route-tables \
-  --route-table-ids "$LAB_ROUTE_TABLE_ID" \
-  --query "length(RouteTables[0].Associations[?SubnetId=='${LAB_SUBNET_ID}'])" \
-  --output text --region "$AWS_REGION" --no-cli-pager)"
+SUBNET_ROW="$(capture "aws ec2 describe-subnets --subnet-ids $LAB_SUBNET_ID <public subnet fields>" \
+  aws_ec2 describe-subnets --subnet-ids "$LAB_SUBNET_ID" \
+    --query 'Subnets[0].[SubnetId,VpcId,CidrBlock,State,MapPublicIpOnLaunch,AvailabilityZone]' --output text)"
+read -r SUBNET_ID SUBNET_VPC SUBNET_CIDR SUBNET_STATE SUBNET_PUBLIC_IP SUBNET_AZ <<< "$SUBNET_ROW"
+SUBNET_PUBLIC_IP="$(printf '%s' "$SUBNET_PUBLIC_IP" | tr '[:upper:]' '[:lower:]')"
 
-LAB_FAILURES=0
-printf '\nVALIDATION SUMMARY\n' | tee -a "$LAB_LOG_FILE"
-record_check 'VPC_CIDR_CHECK' "$LAB_VPC_CIDR" "$LAB_ACTUAL_VPC_CIDR"
-record_check 'VPC_STATE_CHECK' 'available' "$LAB_ACTUAL_VPC_STATE"
-record_check 'VPC_PROJECT_TAG_CHECK' "$LAB_PROJECT" "$LAB_ACTUAL_VPC_PROJECT"
-record_check 'SUBNET_VPC_CHECK' "$LAB_VPC_ID" "$LAB_ACTUAL_SUBNET_VPC"
-record_check 'SUBNET_CIDR_CHECK' "$LAB_SUBNET_CIDR" "$LAB_ACTUAL_SUBNET_CIDR"
-record_check 'SUBNET_STATE_CHECK' 'available' "$LAB_ACTUAL_SUBNET_STATE"
-record_check 'SUBNET_PUBLIC_IP_CHECK' 'true' "$LAB_ACTUAL_PUBLIC_IP_ASSIGN"
-record_check 'IGW_ATTACHMENT_CHECK' '1' "$LAB_ACTUAL_IGW_ATTACHMENT_COUNT"
-record_check 'ROUTE_TABLE_VPC_CHECK' "$LAB_VPC_ID" "$LAB_ACTUAL_ROUTE_TABLE_VPC"
-record_check 'LOCAL_ROUTE_CHECK' '1' "$LAB_ACTUAL_LOCAL_ROUTE_COUNT"
-record_check 'DEFAULT_ROUTE_CHECK' '1' "$LAB_ACTUAL_DEFAULT_ROUTE_COUNT"
-record_check 'SUBNET_ROUTE_ASSOCIATION_CHECK' '1' "$LAB_ACTUAL_SUBNET_ASSOCIATION_COUNT"
+IGW_ROW="$(capture "aws ec2 describe-internet-gateways --internet-gateway-ids $LAB_IGW_ID <attachment>" \
+  aws_ec2 describe-internet-gateways --internet-gateway-ids "$LAB_IGW_ID" \
+    --query 'InternetGateways[0].[InternetGatewayId,Attachments[0].VpcId,Attachments[0].State]' --output text)"
+read -r IGW_ID IGW_VPC IGW_STATE <<< "$IGW_ROW"
 
-if (( LAB_FAILURES == 0 )); then
-  printf 'NETWORK_VALIDATION=PASS\n' | tee -a "$LAB_LOG_FILE"
-  printf '네트워크 검증 완료: PASS\n'
-  printf '로그: %s\n' "$LAB_LOG_FILE"
+ROUTE_ROW="$(capture "aws ec2 describe-route-tables --route-table-ids $LAB_ROUTE_TABLE_ID <routes and association>" \
+  aws_ec2 describe-route-tables --route-table-ids "$LAB_ROUTE_TABLE_ID" \
+    --query "RouteTables[0].[RouteTableId,VpcId,length(Routes[?DestinationCidrBlock=='$LAB_VPC_CIDR' && GatewayId=='local' && State=='active']),length(Routes[?DestinationCidrBlock=='0.0.0.0/0' && GatewayId=='$LAB_IGW_ID' && State=='active']),length(Associations[?SubnetId=='$LAB_SUBNET_ID'])]" \
+    --output text)"
+read -r ROUTE_ID ROUTE_VPC LOCAL_ROUTES DEFAULT_ROUTES SUBNET_ASSOCIATIONS <<< "$ROUTE_ROW"
+
+# 네트워크 구조·상태·태그·라우팅·연결 관계를 평가한다.
+FAILURES=0
+printf '\nVALIDATION SUMMARY\n' | tee -a "$LOG_FILE"
+check VPC_ID "$LAB_VPC_ID" "$VPC_ID"
+check VPC_CIDR "$LAB_VPC_CIDR" "$VPC_CIDR"
+check VPC_STATE available "$VPC_STATE"
+check VPC_PROJECT_TAG "$LAB_PROJECT" "$VPC_PROJECT"
+check SUBNET_ID "$LAB_SUBNET_ID" "$SUBNET_ID"
+check SUBNET_VPC "$LAB_VPC_ID" "$SUBNET_VPC"
+check SUBNET_CIDR "$LAB_SUBNET_CIDR" "$SUBNET_CIDR"
+check SUBNET_STATE available "$SUBNET_STATE"
+check SUBNET_PUBLIC_IP true "$SUBNET_PUBLIC_IP"
+check IGW_ID "$LAB_IGW_ID" "$IGW_ID"
+check IGW_VPC "$LAB_VPC_ID" "$IGW_VPC"
+check IGW_STATE available "$IGW_STATE"
+check ROUTE_TABLE_ID "$LAB_ROUTE_TABLE_ID" "$ROUTE_ID"
+check ROUTE_TABLE_VPC "$LAB_VPC_ID" "$ROUTE_VPC"
+check LOCAL_ROUTE 1 "$LOCAL_ROUTES"
+check DEFAULT_ROUTE 1 "$DEFAULT_ROUTES"
+check SUBNET_ASSOCIATION 1 "$SUBNET_ASSOCIATIONS"
+
+if (( FAILURES == 0 )); then
+  printf 'NETWORK_VALIDATION=PASS\n' | tee -a "$LOG_FILE"
   exit 0
 fi
-
-printf 'NETWORK_VALIDATION=FAIL failures=%d\n' "$LAB_FAILURES" | tee -a "$LAB_LOG_FILE"
-printf '네트워크 검증 실패: %d개 항목을 확인하세요.\n' "$LAB_FAILURES" >&2
-printf '로그: %s\n' "$LAB_LOG_FILE" >&2
+printf 'NETWORK_VALIDATION=FAIL failures=%d\n' "$FAILURES" | tee -a "$LOG_FILE"
 exit 1
-

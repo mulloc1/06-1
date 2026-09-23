@@ -5,22 +5,15 @@
 
 ## 안전한 실행 방법
 
-먼저 조회 전용 모드로 대상 ID와 `Project=codyssey-06-1` 태그를 확인한다. 이 명령은 AWS
-리소스와 로그 파일을 변경하지 않는다.
+아래 명령을 실행하면 대상 ID와 `Project=codyssey-06-1` 태그를 표시한 뒤 확인 문구를
+요청한다.
 
 ```bash
 ./scripts/cleanup-server.sh
 ```
 
-실제 삭제는 아래 명령을 실행한 뒤 확인 문구 `codyssey-06-1`을 직접 입력해야 시작된다.
-
-```bash
-./scripts/cleanup-server.sh execute
-```
-
-`./scripts/cleanup-server.sh --execute`도 동일하게 동작한다.
-
-실행 모드는 `08-cleanup-before.log`와 `09-cleanup-after.log`를 자동 생성하고 AWS Key Pair와
+확인 문구 `codyssey-06-1`이 일치해야 삭제가 시작된다. 확인 전에는 AWS 리소스와 로그를
+변경하지 않는다. 스크립트는 `08-cleanup-before.log`와 `09-cleanup-after.log`를 자동 생성하고 AWS Key Pair와
 대응하는 로컬 Private Key를 함께 삭제한다. IAM 사용자와 정책, MFA, Access Key와 로컬
 `.env`는 삭제 후 AWS 조회를 마친 다음 별도로 정리한다.
 
@@ -56,7 +49,7 @@
 
 ## 삭제 후 검증
 
-다음 항목은 모두 빈 목록이어야 한다. 자동화는 `scripts/cleanup-server.sh --execute`, 개별
+다음 항목은 모두 빈 목록이어야 한다. 자동화는 `scripts/cleanup-server.sh`, 개별
 명령 확인은 `docs/aws-cli-commands.md` Step 10을 사용한다.
 
 - [ ] 실행 중이거나 중지된 프로젝트 EC2가 없다.
