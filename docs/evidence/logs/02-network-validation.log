@@ -1,6 +1,8 @@
+# 설명: VPC, Public Subnet, IGW와 Route Table의 최종 검증을 시작한다.
 [2026-08-26T07:47:47Z] NETWORK VALIDATION START
 region=ap-northeast-2 project=codyssey-06-1
 
+# 설명: VPC의 ID, CIDR, 상태와 Project 태그를 검증한다.
 [2026-08-26T07:47:47Z] $ aws ec2 describe-vpcs --vpc-ids vpc-0a8db9c511a2ba5fd <limited fields>
 [
     {
@@ -12,6 +14,7 @@ region=ap-northeast-2 project=codyssey-06-1
 ]
 [exit=0]
 
+# 설명: Public Subnet의 VPC, CIDR, 상태, 가용 영역과 Public IP 자동 할당을 검증한다.
 [2026-08-26T07:47:48Z] $ aws ec2 describe-subnets --subnet-ids subnet-0c80b1a05b14638b7 <public subnet fields>
 [
     {
@@ -25,6 +28,7 @@ region=ap-northeast-2 project=codyssey-06-1
 ]
 [exit=0]
 
+# 설명: Internet Gateway가 대상 VPC에 정상적으로 연결되어 있는지 검증한다.
 [2026-08-26T07:47:49Z] $ aws ec2 describe-internet-gateways --internet-gateway-ids igw-08d1c92f97efe48be <attachments>
 [
     {
@@ -39,6 +43,7 @@ region=ap-northeast-2 project=codyssey-06-1
 ]
 [exit=0]
 
+# 설명: Route Table의 local 경로, IGW 기본 경로와 Public Subnet 연결을 검증한다.
 [2026-08-26T07:47:49Z] $ aws ec2 describe-route-tables --route-table-ids rtb-0a41f70977d45bfa3 <routes and associations>
 [
     {
@@ -66,22 +71,31 @@ region=ap-northeast-2 project=codyssey-06-1
 ]
 [exit=0]
 
+# 설명: 아래 판정에서 기대값과 실제값을 비교해 네트워크 전체 구성이 정상인지 확인한다.
 VALIDATION SUMMARY
+# 설명: VPC CIDR가 계획한 10.0.0.0/16인지 판정한다.
 [CHECK] VPC_CIDR_CHECK                     expected=10.0.0.0/16              actual=10.0.0.0/16              PASS
+# 설명: VPC 상태가 사용 가능한 available인지 판정한다.
 [CHECK] VPC_STATE_CHECK                    expected=available                actual=available                PASS
+# 설명: VPC의 Project 태그가 실습 프로젝트명과 일치하는지 판정한다.
 [CHECK] VPC_PROJECT_TAG_CHECK              expected=codyssey-06-1            actual=codyssey-06-1            PASS
+# 설명: Public Subnet이 실습 VPC에 속하는지 판정한다.
 [CHECK] SUBNET_VPC_CHECK                   expected=vpc-0a8db9c511a2ba5fd    actual=vpc-0a8db9c511a2ba5fd    PASS
+# 설명: Public Subnet CIDR가 계획한 10.0.1.0/24인지 판정한다.
 [CHECK] SUBNET_CIDR_CHECK                  expected=10.0.1.0/24              actual=10.0.1.0/24              PASS
+# 설명: Public Subnet 상태가 available인지 판정한다.
 [CHECK] SUBNET_STATE_CHECK                 expected=available                actual=available                PASS
+# 설명: Public Subnet의 Public IPv4 자동 할당이 활성화됐는지 판정한다.
 [CHECK] SUBNET_PUBLIC_IP_CHECK             expected=true                     actual=true                     PASS
+# 설명: Internet Gateway가 실습 VPC에 한 번 연결됐는지 판정한다.
 [CHECK] IGW_ATTACHMENT_CHECK               expected=1                        actual=1                        PASS
+# 설명: Route Table이 실습 VPC에 속하는지 판정한다.
 [CHECK] ROUTE_TABLE_VPC_CHECK              expected=vpc-0a8db9c511a2ba5fd    actual=vpc-0a8db9c511a2ba5fd    PASS
+# 설명: VPC CIDR를 위한 local 경로가 활성 상태인지 판정한다.
 [CHECK] LOCAL_ROUTE_CHECK                  expected=1                        actual=1                        PASS
+# 설명: 0.0.0.0/0에서 IGW로 향하는 기본 경로가 활성 상태인지 판정한다.
 [CHECK] DEFAULT_ROUTE_CHECK                expected=1                        actual=1                        PASS
+# 설명: Public Subnet과 Route Table이 연결됐는지 판정한다.
 [CHECK] SUBNET_ROUTE_ASSOCIATION_CHECK     expected=1                        actual=1                        PASS
+# 설명: 모든 네트워크 판정 결과를 종합해 최종 PASS 또는 FAIL을 기록한다.
 NETWORK_VALIDATION=PASS
-# 명령 설명(사후 주석, 기존 명령·출력·종료 코드는 변경하지 않음)
-# describe-vpcs: VPC의 ID, CIDR, 상태와 Project 태그를 검증한다.
-# describe-subnets: Public Subnet의 CIDR, 상태, 가용 영역과 Public IP 자동 할당을 검증한다.
-# describe-internet-gateways: IGW와 대상 VPC의 연결 상태를 검증한다.
-# describe-route-tables: local 경로, IGW 기본 경로와 Public Subnet 연결을 검증한다.

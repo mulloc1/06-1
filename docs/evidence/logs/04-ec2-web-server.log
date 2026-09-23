@@ -1,7 +1,9 @@
 
+# 설명: EC2 SSH 접속용 ED25519 Key Pair를 생성하고 Private Key 출력은 로컬에만 저장한다.
 [2026-08-22T10:24:23Z] aws ec2 create-key-pair --key-name lab-cloud-web-key --key-type ed25519 (private key output stored locally and redacted)
 [exit=0]
 
+# 설명: Key Pair의 이름, 유형과 Project 태그를 확인한다.
 [2026-08-22T10:24:23Z] $ aws ec2 describe-key-pairs --key-names lab-cloud-web-key <metadata only>
 [
     {
@@ -12,18 +14,22 @@
 ]
 [exit=0]
 
+# 설명: Public Subnet에 8GiB gp3 볼륨과 초기 설정을 포함한 EC2를 생성한다.
 [2026-08-22T10:24:27Z] $ aws ec2 run-instances --image-id ami-0729121845edb4108 --instance-type t3.micro --subnet-id subnet-01551e5c41451fcbf --security-group-ids sg-016dc5812e9d37de9 --key-name lab-cloud-web-key --user-data infra/user-data.sh --8GiB-gp3
 i-0255ec7f91e3451bd
 [exit=0]
 
+# 설명: EC2 상태가 running이 될 때까지 기다린다.
 [2026-08-22T10:24:43Z] $ aws ec2 wait instance-running --instance-ids i-0255ec7f91e3451bd
 
 [exit=0]
 
+# 설명: EC2의 시스템 및 인스턴스 상태 검사가 통과할 때까지 기다린다.
 [2026-08-22T10:27:14Z] $ aws ec2 wait instance-status-ok --instance-ids i-0255ec7f91e3451bd
 
 [exit=0]
 
+# 설명: EC2의 실행 상태, 네트워크, Security Group과 연결 볼륨을 확인한다.
 [2026-08-22T10:27:16Z] $ aws ec2 describe-instances --instance-ids i-0255ec7f91e3451bd <limited fields>
 [
     {
@@ -51,6 +57,7 @@ i-0255ec7f91e3451bd
 ]
 [exit=0]
 
+# 설명: 루트 EBS의 크기, 유형, 암호화와 상태를 확인한다.
 [2026-08-22T10:27:17Z] $ aws ec2 describe-volumes --volume-ids vol-0023a966583c55062 <size type encryption state>
 [
     {
@@ -63,6 +70,7 @@ i-0255ec7f91e3451bd
 ]
 [exit=0]
 
+# 설명: SSH 원격 명령으로 Nginx, localhost 웹 응답과 아웃바운드 통신을 확인한다.
 [2026-08-22T10:27:18Z] $ ssh -i <protected-key> ec2-user@54.180.251.168 <nginx, localhost, outbound checks>
 nginx=active
 localhost-root-status=200
@@ -72,9 +80,11 @@ localhost-health-body=OK
 outbound=success
 [exit=0]
 
+# 설명: EC2 SSH 접속용 ED25519 Key Pair를 생성하고 Private Key 출력은 로컬에만 저장한다.
 [2026-08-26T07:19:25Z] aws ec2 create-key-pair --key-name lab-cloud-web-key --key-type ed25519 (private key output stored locally and redacted)
 [exit=0]
 
+# 설명: Key Pair의 이름, 유형과 Project 태그를 확인한다.
 [2026-08-26T07:19:26Z] $ aws ec2 describe-key-pairs --key-names lab-cloud-web-key <metadata only>
 [
     {
@@ -85,18 +95,22 @@ outbound=success
 ]
 [exit=0]
 
+# 설명: Public Subnet에 8GiB gp3 볼륨과 초기 설정을 포함한 EC2를 생성한다.
 [2026-08-26T07:19:29Z] $ aws ec2 run-instances --image-id ami-0729121845edb4108 --instance-type t3.micro --subnet-id subnet-0c80b1a05b14638b7 --security-group-ids sg-06689cb9dcfdc34eb --key-name lab-cloud-web-key --user-data infra/user-data.sh --8GiB-gp3
 i-08fa3ce0909375713
 [exit=0]
 
+# 설명: EC2 상태가 running이 될 때까지 기다린다.
 [2026-08-26T07:19:45Z] $ aws ec2 wait instance-running --instance-ids i-08fa3ce0909375713
 
 [exit=0]
 
+# 설명: EC2의 시스템 및 인스턴스 상태 검사가 통과할 때까지 기다린다.
 [2026-08-26T07:21:32Z] $ aws ec2 wait instance-status-ok --instance-ids i-08fa3ce0909375713
 
 [exit=0]
 
+# 설명: EC2의 실행 상태, 네트워크, Security Group과 연결 볼륨을 확인한다.
 [2026-08-26T07:21:34Z] $ aws ec2 describe-instances --instance-ids i-08fa3ce0909375713 <limited fields>
 [
     {
@@ -124,6 +138,7 @@ i-08fa3ce0909375713
 ]
 [exit=0]
 
+# 설명: 루트 EBS의 크기, 유형, 암호화와 상태를 확인한다.
 [2026-08-26T07:21:35Z] $ aws ec2 describe-volumes --volume-ids vol-06e499adbb5f6a553 <size type encryption state>
 [
     {
@@ -135,11 +150,3 @@ i-08fa3ce0909375713
     }
 ]
 [exit=0]
-# 명령 설명(사후 주석, 기존 명령·출력·종료 코드는 변경하지 않음)
-# create-key-pair: EC2 SSH 접속용 ED25519 Key Pair를 만들고 Private Key는 로컬에만 저장한다.
-# describe-key-pairs: Key Pair 유형과 Project 태그만 확인한다.
-# run-instances: Public Subnet에 8GiB gp3 볼륨과 초기 설정을 포함한 EC2를 생성한다.
-# wait instance-running/status-ok: EC2 실행 및 상태 검사가 통과할 때까지 기다린다.
-# describe-instances: EC2 상태, 네트워크, Security Group과 연결 볼륨을 확인한다.
-# describe-volumes: 루트 EBS의 크기, 유형, 암호화와 상태를 확인한다.
-# ssh ... checks: EC2 내부 Nginx, localhost 응답과 아웃바운드 통신을 확인한다.

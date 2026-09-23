@@ -1,8 +1,7 @@
 
+# 설명: 외부 /health 응답의 상태 코드와 본문을 판정해 최종 PASS 여부를 확인한다.
 [2026-08-22T10:27:18Z] $ curl http://54.180.251.168/health <expect HTTP 200 and body OK>
 http_status=200
 response_body=OK
 http_200_ok=PASS
 [exit=0]
-# 설명(사후 주석): 외부 /health 응답의 상태 코드와 본문을 판정해 최종 PASS 여부를 기록한다.
-# 기존 명령, 출력과 종료 코드는 변경하지 않았다.

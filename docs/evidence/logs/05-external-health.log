@@ -1,4 +1,5 @@
 
+# 설명: 외부에서 /health를 호출해 HTTP 상태 200과 응답 본문 OK를 확인한다.
 [2026-08-22T10:27:18Z] $ curl --include http://54.180.251.168/health
 HTTP/1.1 200 OK
 Server: nginx/1.30.4
@@ -12,5 +13,3 @@ Accept-Ranges: bytes
 
 OK
 [exit=0]
-# 설명(사후 주석): 외부에서 /health를 호출해 HTTP 응답 헤더, 상태 200과 본문 OK를 확인한다.
-# 기존 명령, 출력과 종료 코드는 변경하지 않았다.

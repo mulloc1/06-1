@@ -1,8 +1,10 @@
 
+# 설명: 삭제를 수행하는 호출자가 실습용 IAM 사용자인지 확인한다.
 [2026-08-26T07:48:37Z] $ aws sts get-caller-identity <lab-cloud-web Boolean only>
 True
 [exit=0]
 
+# 설명: 삭제 전에 실습 EC2의 ID, 상태, Public IP와 연결 볼륨을 확인한다.
 [2026-08-26T07:48:38Z] $ aws ec2 describe-instances <project instances before cleanup>
 [
     {
@@ -16,6 +18,7 @@ True
 ]
 [exit=0]
 
+# 설명: 삭제 전에 실습 EBS의 ID, 상태, 크기와 유형을 확인한다.
 [2026-08-26T07:48:39Z] $ aws ec2 describe-volumes <project volumes before cleanup>
 [
     {
@@ -27,10 +30,12 @@ True
 ]
 [exit=0]
 
+# 설명: 삭제 전에 실습 태그가 붙은 Elastic IP가 있는지 확인한다.
 [2026-08-26T07:48:40Z] $ aws ec2 describe-addresses <project Elastic IPs before cleanup>
 []
 [exit=0]
 
+# 설명: 삭제 전에 실습 Key Pair의 이름과 유형을 확인한다.
 [2026-08-26T07:48:41Z] $ aws ec2 describe-key-pairs <project key pairs before cleanup>
 [
     {
@@ -40,6 +45,7 @@ True
 ]
 [exit=0]
 
+# 설명: 삭제 전에 실습 Security Group의 ID와 상태를 확인한다.
 [2026-08-26T07:48:41Z] $ aws ec2 describe-security-groups <project security groups before cleanup>
 [
     {
@@ -50,6 +56,7 @@ True
 ]
 [exit=0]
 
+# 설명: 삭제 전에 Route Table의 ID, 경로와 Subnet 연결 상태를 확인한다.
 [2026-08-26T07:48:42Z] $ aws ec2 describe-route-tables <project route tables before cleanup>
 [
     {
@@ -62,6 +69,7 @@ True
 ]
 [exit=0]
 
+# 설명: 삭제 전에 실습 Subnet의 ID와 상태를 확인한다.
 [2026-08-26T07:48:43Z] $ aws ec2 describe-subnets <project subnets before cleanup>
 [
     {
@@ -72,6 +80,7 @@ True
 ]
 [exit=0]
 
+# 설명: 삭제 전에 Internet Gateway의 ID와 VPC 연결 상태를 확인한다.
 [2026-08-26T07:48:43Z] $ aws ec2 describe-internet-gateways <project IGWs before cleanup>
 [
     {
@@ -86,6 +95,7 @@ True
 ]
 [exit=0]
 
+# 설명: 삭제 전에 실습 VPC의 ID와 상태를 확인한다.
 [2026-08-26T07:48:44Z] $ aws ec2 describe-vpcs <project VPCs before cleanup>
 [
     {
@@ -96,6 +106,7 @@ True
 ]
 [exit=0]
 
+# 설명: 실습 EC2 인스턴스의 종료를 요청한다.
 [2026-08-26T07:48:47Z] $ aws ec2 terminate-instances --instance-ids i-08fa3ce0909375713
 {
     "TerminatingInstances": [
@@ -114,13 +125,16 @@ True
 }
 [exit=0]
 
+# 설명: EC2 인스턴스가 완전히 종료될 때까지 기다린다.
 [2026-08-26T07:49:18Z] $ aws ec2 wait instance-terminated --instance-ids i-08fa3ce0909375713
 
 [exit=0]
 
+# 설명: EC2 종료와 함께 루트 EBS가 자동으로 삭제된 결과를 기록한다.
 [2026-08-26T07:49:19Z] EBS deleted automatically with EC2: vol-06e499adbb5f6a553
 [exit=0]
 
+# 설명: AWS에 등록된 실습 SSH Key Pair 메타데이터를 삭제한다.
 [2026-08-26T07:49:21Z] $ aws ec2 delete-key-pair --key-name lab-cloud-web-key
 {
     "Return": true,
@@ -128,9 +142,11 @@ True
 }
 [exit=0]
 
+# 설명: AWS Key Pair에 대응하는 로컬 SSH Private Key를 삭제한 결과를 기록한다.
 [2026-08-26T07:49:21Z] local SSH Private Key deleted: .secrets/lab-cloud-web-key.pem
 [exit=0]
 
+# 설명: EC2 네트워크 종속성이 해제된 Security Group을 삭제한다.
 [2026-08-26T07:49:23Z] $ aws ec2 delete-security-group --group-id sg-06689cb9dcfdc34eb <attempt 1/12>
 {
     "Return": true,
@@ -138,41 +154,37 @@ True
 }
 [exit=0]
 
+# 설명: Public Subnet이 해당 Route Table을 사용하도록 연결한다.
 [2026-08-26T07:49:26Z] $ aws ec2 disassociate-route-table --association-id rtbassoc-03e35680c2ba3e081
 
 [exit=0]
 
+# 설명: Route Table에서 Internet Gateway 기본 경로를 삭제한다.
 [2026-08-26T07:49:27Z] $ aws ec2 delete-route --route-table-id rtb-0a41f70977d45bfa3 --destination-cidr-block 0.0.0.0/0
 
 [exit=0]
 
+# 설명: 연결과 사용자 경로가 제거된 Route Table을 삭제한다.
 [2026-08-26T07:49:28Z] $ aws ec2 delete-route-table --route-table-id rtb-0a41f70977d45bfa3
 
 [exit=0]
 
+# 설명: 실습 Public Subnet을 삭제한다.
 [2026-08-26T07:49:30Z] $ aws ec2 delete-subnet --subnet-id subnet-0c80b1a05b14638b7
 
 [exit=0]
 
+# 설명: Internet Gateway와 실습 VPC의 연결을 해제한다.
 [2026-08-26T07:49:33Z] $ aws ec2 detach-internet-gateway --internet-gateway-id igw-08d1c92f97efe48be --vpc-id vpc-0a8db9c511a2ba5fd
 
 [exit=0]
 
+# 설명: VPC에서 분리된 Internet Gateway를 삭제한다.
 [2026-08-26T07:49:33Z] $ aws ec2 delete-internet-gateway --internet-gateway-id igw-08d1c92f97efe48be
 
 [exit=0]
 
+# 설명: 하위 네트워크 리소스가 제거된 실습 VPC를 삭제한다.
 [2026-08-26T07:49:35Z] $ aws ec2 delete-vpc --vpc-id vpc-0a8db9c511a2ba5fd
 
 [exit=0]
-# 명령 설명(사후 주석, 기존 명령·출력·종료 코드는 변경하지 않음)
-# get-caller-identity: 삭제를 수행하는 호출자가 실습용 IAM 사용자인지 확인한다.
-# describe-* before cleanup: 삭제 전 각 실습 리소스의 ID와 상태를 확인한다.
-# terminate-instances / wait: EC2 종료를 요청하고 완전히 종료될 때까지 기다린다.
-# delete-key-pair: AWS에 등록된 실습 SSH Key Pair 메타데이터를 삭제한다.
-# delete-security-group: EC2 네트워크 종속성 해제 후 Security Group을 삭제한다.
-# disassociate-route-table: Public Subnet과 Route Table의 연결을 해제한다.
-# delete-route / delete-route-table: IGW 기본 경로와 사용자 Route Table을 삭제한다.
-# delete-subnet: 실습 Public Subnet을 삭제한다.
-# detach/delete-internet-gateway: IGW를 VPC에서 분리한 후 삭제한다.
-# delete-vpc: 하위 네트워크 리소스가 제거된 실습 VPC를 삭제한다.

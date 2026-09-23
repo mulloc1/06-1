@@ -1,46 +1,57 @@
 
+# 설명: 실습용 CIDR과 식별 태그를 가진 VPC를 생성한다.
 [2026-08-22T10:24:00Z] $ aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications <Project and Name tags>
 vpc-0a0a0905f06de4e9d
 [exit=0]
 
+# 설명: VPC 내부 DNS 질의 기능을 활성화한다.
 [2026-08-22T10:24:01Z] $ aws ec2 modify-vpc-attribute --vpc-id vpc-0a0a0905f06de4e9d --enable-dns-support true
 
 [exit=0]
 
+# 설명: Public IP가 있는 EC2에 DNS 호스트 이름을 부여하도록 설정한다.
 [2026-08-22T10:24:02Z] $ aws ec2 modify-vpc-attribute --vpc-id vpc-0a0a0905f06de4e9d --enable-dns-hostnames true
 
 [exit=0]
 
+# 설명: VPC 안에 지정 CIDR과 가용 영역을 사용하는 Public Subnet을 생성한다.
 [2026-08-22T10:24:04Z] $ aws ec2 create-subnet --vpc-id vpc-0a0a0905f06de4e9d --cidr-block 10.0.1.0/24 --availability-zone ap-northeast-2a
 subnet-01551e5c41451fcbf
 [exit=0]
 
+# 설명: Subnet에서 새 EC2에 Public IPv4가 자동 할당되도록 설정한다.
 [2026-08-22T10:24:05Z] $ aws ec2 modify-subnet-attribute --subnet-id subnet-01551e5c41451fcbf --map-public-ip-on-launch true
 
 [exit=0]
 
+# 설명: VPC와 인터넷을 연결할 Internet Gateway를 생성한다.
 [2026-08-22T10:24:06Z] $ aws ec2 create-internet-gateway --tag-specifications <Project and Name tags>
 igw-0e4e625fee863d5b7
 [exit=0]
 
+# 설명: 생성한 Internet Gateway를 실습 VPC에 연결한다.
 [2026-08-22T10:24:07Z] $ aws ec2 attach-internet-gateway --internet-gateway-id igw-0e4e625fee863d5b7 --vpc-id vpc-0a0a0905f06de4e9d
 
 [exit=0]
 
+# 설명: Public Subnet 전용 Route Table을 생성한다.
 [2026-08-22T10:24:09Z] $ aws ec2 create-route-table --vpc-id vpc-0a0a0905f06de4e9d
 rtb-0da00fd56d22d1e00
 [exit=0]
 
+# 설명: 모든 외부 목적지 트래픽을 Internet Gateway로 보내는 기본 경로를 추가한다.
 [2026-08-22T10:24:10Z] $ aws ec2 create-route --route-table-id rtb-0da00fd56d22d1e00 --destination-cidr-block 0.0.0.0/0 --gateway-id igw-0e4e625fee863d5b7
 {
     "Return": true
 }
 [exit=0]
 
+# 설명: Public Subnet이 해당 Route Table을 사용하도록 연결한다.
 [2026-08-22T10:24:12Z] $ aws ec2 associate-route-table --route-table-id rtb-0da00fd56d22d1e00 --subnet-id subnet-01551e5c41451fcbf
 rtbassoc-07136d8f03fdf3441
 [exit=0]
 
+# 설명: VPC의 CIDR, 상태와 Project 태그를 확인한다.
 [2026-08-22T10:24:13Z] $ aws ec2 describe-vpcs --vpc-ids vpc-0a0a0905f06de4e9d <limited fields>
 [
     {
@@ -52,6 +63,7 @@ rtbassoc-07136d8f03fdf3441
 ]
 [exit=0]
 
+# 설명: Subnet의 CIDR, 가용 영역과 Public IP 자동 할당 설정을 확인한다.
 [2026-08-22T10:24:14Z] $ aws ec2 describe-subnets --subnet-ids subnet-01551e5c41451fcbf <limited fields>
 [
     {
@@ -64,6 +76,7 @@ rtbassoc-07136d8f03fdf3441
 ]
 [exit=0]
 
+# 설명: Internet Gateway의 VPC 연결 상태를 확인한다.
 [2026-08-22T10:24:14Z] $ aws ec2 describe-internet-gateways --internet-gateway-ids igw-0e4e625fee863d5b7 <attachments>
 [
     {
@@ -78,6 +91,7 @@ rtbassoc-07136d8f03fdf3441
 ]
 [exit=0]
 
+# 설명: Route Table의 local/default 경로와 Public Subnet 연결을 확인한다.
 [2026-08-22T10:24:15Z] $ aws ec2 describe-route-tables --route-table-ids rtb-0da00fd56d22d1e00 <routes and associations>
 [
     {
@@ -104,48 +118,59 @@ rtbassoc-07136d8f03fdf3441
 ]
 [exit=0]
 
+# 설명: 실습용 CIDR과 식별 태그를 가진 VPC를 생성한다.
 [2026-08-26T07:19:02Z] $ aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications <Project and Name tags>
 vpc-0a8db9c511a2ba5fd
 [exit=0]
 
+# 설명: VPC 내부 DNS 질의 기능을 활성화한다.
 [2026-08-26T07:19:03Z] $ aws ec2 modify-vpc-attribute --vpc-id vpc-0a8db9c511a2ba5fd --enable-dns-support true
 
 [exit=0]
 
+# 설명: Public IP가 있는 EC2에 DNS 호스트 이름을 부여하도록 설정한다.
 [2026-08-26T07:19:04Z] $ aws ec2 modify-vpc-attribute --vpc-id vpc-0a8db9c511a2ba5fd --enable-dns-hostnames true
 
 [exit=0]
 
+# 설명: VPC 안에 지정 CIDR과 가용 영역을 사용하는 Public Subnet을 생성한다.
 [2026-08-26T07:19:06Z] $ aws ec2 create-subnet --vpc-id vpc-0a8db9c511a2ba5fd --cidr-block 10.0.1.0/24 --availability-zone ap-northeast-2a
 subnet-0c80b1a05b14638b7
 [exit=0]
 
+# 설명: Subnet에서 새 EC2에 Public IPv4가 자동 할당되도록 설정한다.
 [2026-08-26T07:19:07Z] $ aws ec2 modify-subnet-attribute --subnet-id subnet-0c80b1a05b14638b7 --map-public-ip-on-launch true
 
 [exit=0]
 
+# 설명: VPC와 인터넷을 연결할 Internet Gateway를 생성한다.
 [2026-08-26T07:19:08Z] $ aws ec2 create-internet-gateway --tag-specifications <Project and Name tags>
 igw-08d1c92f97efe48be
 [exit=0]
 
+# 설명: 생성한 Internet Gateway를 실습 VPC에 연결한다.
 [2026-08-26T07:19:10Z] $ aws ec2 attach-internet-gateway --internet-gateway-id igw-08d1c92f97efe48be --vpc-id vpc-0a8db9c511a2ba5fd
 
 [exit=0]
 
+# 설명: Public Subnet 전용 Route Table을 생성한다.
 [2026-08-26T07:19:11Z] $ aws ec2 create-route-table --vpc-id vpc-0a8db9c511a2ba5fd
 rtb-0a41f70977d45bfa3
 [exit=0]
 
+# 설명: 모든 외부 목적지 트래픽을 Internet Gateway로 보내는 기본 경로를 추가한다.
 [2026-08-26T07:19:13Z] $ aws ec2 create-route --route-table-id rtb-0a41f70977d45bfa3 --destination-cidr-block 0.0.0.0/0 --gateway-id igw-08d1c92f97efe48be
 {
     "Return": true
 }
 [exit=0]
 
+# 설명: Public Subnet이 해당 Route Table을 사용하도록 연결한다.
 [2026-08-26T07:19:15Z] $ aws ec2 associate-route-table --route-table-id rtb-0a41f70977d45bfa3 --subnet-id subnet-0c80b1a05b14638b7
 rtbassoc-03e35680c2ba3e081
 [exit=0]
 
+# 설명: VPC의 CIDR, 상태와 Project 태그를 확인한다.
 [2026-08-26T07:19:16Z] $ aws ec2 describe-vpcs --vpc-ids vpc-0a8db9c511a2ba5fd <limited fields>
 [
     {
@@ -157,6 +182,7 @@ rtbassoc-03e35680c2ba3e081
 ]
 [exit=0]
 
+# 설명: Subnet의 CIDR, 가용 영역과 Public IP 자동 할당 설정을 확인한다.
 [2026-08-26T07:19:16Z] $ aws ec2 describe-subnets --subnet-ids subnet-0c80b1a05b14638b7 <limited fields>
 [
     {
@@ -169,6 +195,7 @@ rtbassoc-03e35680c2ba3e081
 ]
 [exit=0]
 
+# 설명: Internet Gateway의 VPC 연결 상태를 확인한다.
 [2026-08-26T07:19:17Z] $ aws ec2 describe-internet-gateways --internet-gateway-ids igw-08d1c92f97efe48be <attachments>
 [
     {
@@ -183,6 +210,7 @@ rtbassoc-03e35680c2ba3e081
 ]
 [exit=0]
 
+# 설명: Route Table의 local/default 경로와 Public Subnet 연결을 확인한다.
 [2026-08-26T07:19:18Z] $ aws ec2 describe-route-tables --route-table-ids rtb-0a41f70977d45bfa3 <routes and associations>
 [
     {
@@ -208,16 +236,3 @@ rtbassoc-03e35680c2ba3e081
     }
 ]
 [exit=0]
-# 명령 설명(사후 주석, 기존 명령·출력·종료 코드는 변경하지 않음)
-# create-vpc: 실습용 CIDR과 태그를 가진 VPC를 생성한다.
-# modify-vpc-attribute: VPC의 DNS 질의 및 DNS 호스트 이름 기능을 활성화한다.
-# create-subnet: VPC 안에 지정 CIDR과 가용 영역의 Public Subnet을 생성한다.
-# modify-subnet-attribute: 새 EC2에 Public IPv4가 자동 할당되도록 설정한다.
-# create/attach-internet-gateway: IGW를 생성하고 실습 VPC에 연결한다.
-# create-route-table: Public Subnet이 사용할 Route Table을 생성한다.
-# create-route: 외부 목적지 0.0.0.0/0의 다음 대상을 IGW로 설정한다.
-# associate-route-table: Public Subnet과 Route Table을 연결한다.
-# describe-vpcs: VPC의 CIDR, 상태와 태그를 확인한다.
-# describe-subnets: Subnet의 CIDR, 가용 영역과 Public IP 설정을 확인한다.
-# describe-internet-gateways: IGW가 VPC에 연결됐는지 확인한다.
-# describe-route-tables: local/default 경로와 Subnet 연결을 확인한다.

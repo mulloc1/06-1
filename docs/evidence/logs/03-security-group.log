@@ -1,8 +1,10 @@
 
+# 설명: 웹과 SSH 접근을 제어할 실습용 Security Group을 생성한다.
 [2026-08-22T10:24:17Z] $ aws ec2 create-security-group --group-name lab-cloud-web-sg --vpc-id vpc-0a0a0905f06de4e9d
 sg-016dc5812e9d37de9
 [exit=0]
 
+# 설명: 외부 HTTP 접속을 위해 TCP 80 포트를 전체 IPv4에 허용한다.
 [2026-08-22T10:24:19Z] $ aws ec2 authorize-security-group-ingress --group-id sg-016dc5812e9d37de9 --protocol tcp --port 80 --cidr 0.0.0.0/0
 {
     "Return": true,
@@ -22,6 +24,7 @@ sg-016dc5812e9d37de9
 }
 [exit=0]
 
+# 설명: SSH 접속을 학습자의 공인 IP 한 개(/32)에만 허용한다.
 [2026-08-22T10:24:20Z] $ aws ec2 authorize-security-group-ingress --group-id sg-016dc5812e9d37de9 --protocol tcp --port 22 --cidr <learner-ip>/32
 {
     "Return": true,
@@ -41,6 +44,7 @@ sg-016dc5812e9d37de9
 }
 [exit=0]
 
+# 설명: Security Group에 HTTP와 제한된 SSH 인바운드 규칙만 존재하는지 확인한다.
 [2026-08-22T10:24:21Z] $ aws ec2 describe-security-groups --group-ids sg-016dc5812e9d37de9 <inbound rules>
 [
     {
@@ -68,10 +72,12 @@ sg-016dc5812e9d37de9
 ]
 [exit=0]
 
+# 설명: 웹과 SSH 접근을 제어할 실습용 Security Group을 생성한다.
 [2026-08-26T07:19:20Z] $ aws ec2 create-security-group --group-name lab-cloud-web-sg --vpc-id vpc-0a8db9c511a2ba5fd
 sg-06689cb9dcfdc34eb
 [exit=0]
 
+# 설명: 외부 HTTP 접속을 위해 TCP 80 포트를 전체 IPv4에 허용한다.
 [2026-08-26T07:19:21Z] $ aws ec2 authorize-security-group-ingress --group-id sg-06689cb9dcfdc34eb --protocol tcp --port 80 --cidr 0.0.0.0/0
 {
     "Return": true,
@@ -91,6 +97,7 @@ sg-06689cb9dcfdc34eb
 }
 [exit=0]
 
+# 설명: SSH 접속을 학습자의 공인 IP 한 개(/32)에만 허용한다.
 [2026-08-26T07:19:23Z] $ aws ec2 authorize-security-group-ingress --group-id sg-06689cb9dcfdc34eb --protocol tcp --port 22 --cidr <learner-ip>/32
 {
     "Return": true,
@@ -110,6 +117,7 @@ sg-06689cb9dcfdc34eb
 }
 [exit=0]
 
+# 설명: Security Group에 HTTP와 제한된 SSH 인바운드 규칙만 존재하는지 확인한다.
 [2026-08-26T07:19:24Z] $ aws ec2 describe-security-groups --group-ids sg-06689cb9dcfdc34eb <inbound rules>
 [
     {
@@ -136,8 +144,3 @@ sg-06689cb9dcfdc34eb
     }
 ]
 [exit=0]
-# 명령 설명(사후 주석, 기존 명령·출력·종료 코드는 변경하지 않음)
-# create-security-group: 웹과 SSH 접근을 제어할 실습용 Security Group을 생성한다.
-# authorize ... port 80: 외부 HTTP 접속을 위해 TCP 80을 전체 IPv4에 허용한다.
-# authorize ... port 22: SSH 접속을 학습자 공인 IP 한 개(/32)에만 허용한다.
-# describe-security-groups: 실제 인바운드 규칙이 HTTP와 제한된 SSH뿐인지 확인한다.
